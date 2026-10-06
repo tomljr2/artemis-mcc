@@ -1,5 +1,9 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
 [project]
-name = "artemis"
+name = "artemis-mcc"
 version = "0.0.0"
 description = "An aerospace-specialist LLM with a mission-control go/no-go verification layer."
 readme = "README.md"
@@ -7,6 +11,8 @@ license = "MIT"
 requires-python = ">=3.12"
 dependencies = [
     "numpy",
+    # Install the CUDA build of torch first (see README, Getting started); pip will then
+    # treat this requirement as satisfied instead of pulling the CPU-only build.
     "torch",
 ]
 
@@ -14,6 +20,10 @@ dependencies = [
 pretrain = ["tiktoken", "datasets", "matplotlib"]
 data = ["requests", "datasketch"]
 dev = ["pytest", "ruff"]
+
+[tool.setuptools]
+# No importable packages yet. Packages get listed here as each subsystem gains code.
+packages = []
 
 [tool.ruff]
 line-length = 100

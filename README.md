@@ -53,6 +53,23 @@ a Hugging Face release with a model card.
 Tags use the form `artemis-i`, `artemis-ii`, `artemis-iii`. Work between releases lives on
 `main`.
 
+## Getting started
+
+Requires Python 3.12+ and, for GPU training, an NVIDIA GPU.
+
+```bash
+python -m venv .venv
+source .venv/bin/activate        # Windows: .venv\Scripts\activate
+
+# 1. Install PyTorch for your GPU first. Pick the command for your system at
+#    https://pytorch.org/get-started/locally/
+#    (Older Pascal cards such as the GTX 10-series need the CUDA 12.6 build: cu126.)
+pip install torch --index-url https://download.pytorch.org/whl/cu126
+
+# 2. Install Artemis and the extras for the phase you are working on.
+pip install -e ".[pretrain,dev]"
+```
+
 ## Repository layout
 
 ```

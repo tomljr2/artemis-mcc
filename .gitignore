@@ -8,9 +8,8 @@ venv/
 .ruff_cache/
 .ipynb_checkpoints/
 
-# IDE (shared project files in .idea/ are tracked; personal ones are ignored)
-.idea/workspace.xml
-.idea/shelf/
+# IDE
+.idea/
 .vscode/
 
 # Training artifacts (publish to Hugging Face / W&B, not git)
