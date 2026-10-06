@@ -235,3 +235,12 @@ have 0.74M. The model has outgrown the data, which is why Phase 2's corpus matte
 ~5% of measured matmul throughput (small matrices, per-head Python loop, eval overhead).
 Generated sentences are new combinations, not copies (checked against the transcript).
 **Next:** Step 20: re-test dropout at this size.
+
+## 2026-10-06 · Phase 1 · Step 20: Dropout, re-tested at scale
+**Objective:** Give dropout a fair test now that the model overfits.
+**What I did:** Same 821k-param setup and seed with dropout 0.1 and 0.2; default set to 0.1.
+**What I learned:** The right regularization depends on whether the model is memorizing.
+Dropout hurt the 57k model (not memorizing) and fixed the 821k model (memorizing).
+**Measurements (best / final val):** 0.0 → 1.317 / 1.424, 0.1 → 1.267 / 1.267,
+0.2 → 1.277 / 1.277 (still falling). ~8 min per run.
+**Next:** Step 21: save the best model and sample from it.

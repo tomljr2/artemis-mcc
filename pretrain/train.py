@@ -34,10 +34,10 @@ CONFIGS = {
         "n_embd": 128,  # channels per position
         "n_head": 4,  # attention heads, each n_embd // n_head = 32 channels wide
         "n_layer": 4,  # transformer blocks stacked
-        # Fraction of values zeroed during training, against memorizing. Off for now: at this
-        # size and 5,000 steps, 0.1 and 0.2 made val loss worse (1.661 -> 1.724 / 1.780).
-        # Revisit when the model is bigger or trains longer.
-        "dropout": 0.0,
+        # Fraction of values zeroed during training, against memorizing. Measured at this
+        # size (best val loss): 0.0 -> 1.317 then rising to 1.424 (overfits), 0.1 -> 1.267,
+        # 0.2 -> 1.277. On the earlier 57k-param model it only hurt (1.661 -> 1.724).
+        "dropout": 0.1,
     },
 }
 EVAL_INTERVAL = 500  # report losses every this many steps
