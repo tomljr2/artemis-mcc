@@ -54,3 +54,14 @@ holds an expired cross-signed ISRG Root X2 (Sep 2025), which OpenSSL chose over 
 path. Fixed by verifying against `certifi`, not by disabling verification. (2) One OCR byte
 (`0xA2` for "o") was not valid UTF-8; fixed explicitly and decoding made strict.
 **Next:** Step 4: encode text to integers and split train/validation.
+
+## 2026-10-06 · Phase 1 · Step 4: Character tokenizer
+**Objective:** Turn text into integers and back.
+**What I did:** `pretrain/char_tokenizer.py` (encode/decode over the sorted unique
+characters), written test-first with `tests/test_char_tokenizer.py`.
+**What I learned:** A network is only arithmetic, so text must become numbers. A small
+vocabulary keeps the output layer small (one score per token). Token ids are *not*
+quantities: "R"=45 is not "close" to "S"=46. They are row indices into a learned embedding
+table, which is where meaning comes from.
+**Measurements:** vocab 81; the full transcript round-trips exactly (826,031 ids).
+**Next:** Step 5: train/validation split.

@@ -25,5 +25,9 @@ dev = ["pytest", "ruff"]
 # No importable packages yet. Packages get listed here as each subsystem gains code.
 packages = []
 
+[tool.pytest.ini_options]
+pythonpath = ["."]  # lets tests import from pretrain/, data/, ... at the repo root
+testpaths = ["tests"]
+
 [tool.ruff]
 line-length = 100
