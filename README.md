@@ -29,28 +29,30 @@ When the consoles disagree, Artemis says so instead of guessing.
                 answer, or a reported disagreement (NO-GO)
 ```
 
-| Console | Real MCC role | Artemis job |
+| Console | Real Mission Control role | Artemis job |
 |---|---|---|
-| **FIDO** | Flight Dynamics Officer: trajectory and maneuvers | Quantitative reasoning: delta-v, Hohmann transfers, Isp, unit conversions. Checks its work by running code. |
-| **GUIDO** | Guidance Officer: onboard navigation state | Factual grounding: answers only from retrieved NASA documents, with citations. |
-| **SURGEON** | Flight Surgeon: crew health | Safety and sanity: checks claims against sources, catches false premises, flags overconfidence. |
-| **FLIGHT** | Flight Director: final authority | Routes the query, runs the consoles in parallel, polls them, and calls GO or NO-GO. |
+| **FIDO** | Flight Dynamics Officer: computes the trajectory and plans every engine burn. | Quantitative reasoning: delta-v, Hohmann transfers, Isp, unit conversions. Checks its work by running code. |
+| **GUIDO** | Guidance Officer (Apollo era): checks that the spacecraft computer's view of where it is matches ground tracking. GUIDO Steve Bales made the "go" call on the 1202 alarms during the Apollo 11 landing. | Factual grounding: checks the model's answer against retrieved NASA documents, with citations. |
+| **SURGEON** | Flight Surgeon: watches crew health and can call a halt on medical grounds. | Safety and sanity: catches false premises, unsafe advice, and overconfidence. |
+| **FLIGHT** | Flight Director: final authority. Polls every console "go/no-go" before critical events like launch, burns, and landing. | Routes the query, runs the consoles in parallel, polls them, and calls GO or NO-GO. |
 
 Each console is the same fine-tuned model with its own system prompt and tools, so the
 whole system runs on one hosted model.
 
 ## Releases
 
-Releases follow the Artemis mission sequence. Each one is a git tag and, where it applies,
-a Hugging Face release with a model card.
+Releases follow the Artemis mission sequence as restructured by NASA in February 2026.
+Each one is a git tag and, where it applies, a Hugging Face release with a model card.
 
-| Release | Mission | What ships |
+| Release | The real mission | What ships |
 |---|---|---|
-| **Artemis I** | Uncrewed test flight | A small GPT pretrained from scratch on general text plus NASA text. A learning artifact: every line explained, with training curves published. |
-| **Artemis II** | Crewed flyby | An open-weight 4B to 9B model with continued pretraining on the NASA corpus, then SFT, DPO, and GRPO. Evaluated on FLIGHT-Bench. |
-| **Artemis III** | Crewed landing | The full console system: retrieval, tools, go/no-go poll, served with a live demo. |
+| **Artemis I** | Uncrewed test flight of SLS and Orion around the Moon (Nov–Dec 2022). Proved the hardware before people flew on it. | A small GPT pretrained from scratch. Proves the training stack end to end before anything depends on it. |
+| **Artemis II** | First crewed flight: a 10-day lunar flyby, no landing (Apr 2026). | The fine-tuned 4B to 9B model (continued pretraining, SFT, DPO, GRPO). The first model people actually use, measured on FLIGHT-Bench, but without the full console system yet. |
+| **Artemis III** | Earth-orbit test (planned 2027): Orion rendezvous and docking with the commercial lunar landers, plus spacesuit tests. Like Apollo 9, it rehearses the landing hardware close to home. | The console system integrated and docked to the model: retrieval, tools, and the go/no-go poll, tested on FLIGHT-Bench before going public. |
+| **Artemis IV** | First crewed lunar landing since Apollo 17 (planned 2028). | Launch: the full system served publicly with a live demo, model cards, and the final writeup. |
+| **Artemis V+** | Further landings and the start of a permanent Moon base (planned late 2028 onward). | Sustained operations: corpus and benchmark updates, new console capabilities. |
 
-Tags use the form `artemis-i`, `artemis-ii`, `artemis-iii`. Work between releases lives on
+Tags use the form `artemis-i`, `artemis-ii`, and so on. Work between releases lives on
 `main`.
 
 ## Getting started

@@ -35,8 +35,14 @@ Artemis is two models and one runtime.
   general text plus the NASA corpus. It exists to teach the internals.
 - **Artemis II:** a 4B to 9B open-weight model with continued pretraining on the corpus,
   then SFT, DPO, and GRPO. It powers the runtime.
-- **Runtime (Artemis III):** consoles FIDO (math), GUIDO (facts with retrieval), and
-  SURGEON (safety and sanity), polled by the Flight Director.
+- **Runtime:** consoles FIDO (math), GUIDO (facts with retrieval), and SURGEON (safety and
+  sanity), polled by the Flight Director. Integrated and tested in Artemis III, launched
+  publicly in Artemis IV.
+
+Release mapping (after NASA's February 2026 restructure): Artemis I = from-scratch model
+(uncrewed test flight), Artemis II = fine-tuned model (first crewed flight, lunar flyby),
+Artemis III = console integration tested before going public (Earth-orbit docking test,
+2027), Artemis IV = public launch of the full system (first landing, 2028).
 
 The poll is the differentiator: when consoles disagree, Artemis reports the disagreement
 instead of guessing. Each console is the same model with a different system prompt and
@@ -111,7 +117,7 @@ Phases 1 and 2 can overlap.
 - [ ] SFT on generated and hand-written Q&A, then DPO on preference pairs.
 - [ ] GRPO on quantitative items with a programmatic reward. Evaluate after every stage.
 
-### Phase 4 · Consoles and retrieval
+### Phase 4 · Consoles and retrieval (Artemis III)
 - [ ] Hybrid BM25 + vector index with reranking for GUIDO.
 - [ ] Code-execution tool for FIDO; claim checking against retrieved passages for SURGEON.
 - [ ] Flight Director as a LangGraph graph: route, run consoles in parallel, poll, decide.
@@ -120,7 +126,7 @@ Phases 1 and 2 can overlap.
 - [ ] Run every baseline and every layer of the stack on FLIGHT-Bench.
 - [ ] Failure analysis: the ten worst answers and why.
 
-### Phase 6 · Launch (Artemis III)
+### Phase 6 · Launch (Artemis IV)
 - [ ] Quantize and serve; demo UI with a visible poll; model cards; final writeup.
 
 ## Evaluation: FLIGHT-Bench
