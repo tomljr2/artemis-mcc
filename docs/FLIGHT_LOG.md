@@ -89,3 +89,15 @@ to the GPU with `.to(device)` while the dataset stays on the CPU.
 **Anomalies:** Timestamps are a noticeable share of the text and their digits are nearly
 unpredictable, which puts a floor under the achievable loss.
 **Next:** Step 7: bigram model and its loss before training.
+
+## 2026-10-06 · Phase 1 · Step 7: Bigram model
+**Objective:** Build the first model and measure it before training.
+**What I did:** `pretrain/bigram.py`: one 81×81 `nn.Embedding` table; forward returns
+logits and cross-entropy loss. Tests check shapes, that only the current token matters,
+and that an all-zero table gives exactly ln(81).
+**What I learned:** Logits are raw scores; softmax makes them probabilities; cross-entropy
+is −ln(probability of the correct token), averaged over B×T examples. ln(vocab) is the
+loss of a uniform guess, the sanity check for any untrained model.
+**Measurements:** 6,561 parameters. Untrained loss 4.887 vs ln(81) = 4.394: random initial
+scores make the model confidently wrong, which costs ~0.5 over a uniform guess.
+**Next:** Step 8: training loop.
