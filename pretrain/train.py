@@ -13,10 +13,12 @@ from torch import nn
 
 from pretrain.bigram import BigramModel
 from pretrain.char_tokenizer import CharTokenizer
+from pretrain.checkpoint import save_checkpoint
 from pretrain.dataset import get_batch, train_val_split
 from pretrain.gpt import GPT
 
 TEXT_PATH = Path("data/processed/apollo11_tec.txt")
+CHECKPOINT_PATH = Path("checkpoints/gpt_apollo11.pt")  # git-ignored
 
 # Hyperparameters: settings we choose, as opposed to parameters the model learns.
 CONFIGS = {
@@ -90,14 +92,15 @@ def main(model_name: str) -> None:
     if model_name == "bigram":
         model = BigramModel(tok.vocab_size)
     else:
-        model = GPT(
-            tok.vocab_size,
-            cfg["block_size"],
-            cfg["n_embd"],
-            cfg["n_head"],
-            cfg["n_layer"],
-            cfg["dropout"],
-        )
+        gpt_args = {
+            "vocab_size": tok.vocab_size,
+            "block_size": cfg["block_size"],
+            "n_embd": cfg["n_embd"],
+            "n_head": cfg["n_head"],
+            "n_layer": cfg["n_layer"],
+            "dropout": cfg["dropout"],
+        }
+        model = GPT(**gpt_args)
     model = model.to(device)
     print(f"{model_name}: {sum(p.numel() for p in model.parameters()):,} parameters")
     # AdamW: gradient descent that also adapts the step size for each parameter.
@@ -105,6 +108,7 @@ def main(model_name: str) -> None:
 
     block_size, batch_size = cfg["block_size"], cfg["batch_size"]
     start_time = time.perf_counter()
+    best_val_loss = float("inf")
     for step in range(cfg["max_steps"] + 1):
         if step % EVAL_INTERVAL == 0:
             losses = estimate_loss(
@@ -115,6 +119,13 @@ def main(model_name: str) -> None:
                 f" | val loss {losses['val']:.3f}"
                 f" | {time.perf_counter() - start_time:5.0f}s"
             )
+            # Keep the best model seen so far, not just the last one: if training starts to
+            # overfit, the saved copy is still the version that did best on unseen text.
+            if model_name == "gpt" and losses["val"] < best_val_loss:
+                best_val_loss = losses["val"]
+                vocab = tok.decode(list(range(tok.vocab_size)))  # every character, in id order
+                save_checkpoint(CHECKPOINT_PATH, model, gpt_args, vocab, step, best_val_loss)
+                print(f"           saved new best to {CHECKPOINT_PATH}")
         if step < cfg["max_steps"]:
             x, y = get_batch(train_data, block_size, batch_size, device)
             train_step(model, optimizer, x, y)

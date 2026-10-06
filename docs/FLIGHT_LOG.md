@@ -244,3 +244,15 @@ Dropout hurt the 57k model (not memorizing) and fixed the 821k model (memorizing
 **Measurements (best / final val):** 0.0 → 1.317 / 1.424, 0.1 → 1.267 / 1.267,
 0.2 → 1.277 / 1.277 (still falling). ~8 min per run.
 **Next:** Step 21: save the best model and sample from it.
+
+## 2026-10-06 · Phase 1 · Step 21: Checkpointing
+**Objective:** Keep the trained model so we never retrain just to use it.
+**What I did:** `pretrain/checkpoint.py` with `save_checkpoint` / `load_checkpoint` (weights,
+model settings, vocab, step, val loss). `train.py` saves to `checkpoints/gpt_apollo11.pt`
+(git-ignored) whenever val loss reaches a new best.
+**What I learned:** A model is just named weight tensors plus the settings needed to rebuild
+an empty one of the same shape. Save on best val, not last step: it guards against
+overfitting late in the run. `weights_only=True` makes loading safe.
+**Measurements:** Full run saved step 10,000, val 1.267 (3.3 MB). Reloaded model matches the
+saved one exactly in tests.
+**Next:** Step 22: sample from the checkpoint with a custom prompt.
