@@ -5,7 +5,7 @@ from pretrain.gpt import GPT
 
 def make_model() -> GPT:
     torch.manual_seed(0)
-    return GPT(vocab_size=20, block_size=8, n_embd=16, n_head=4)
+    return GPT(vocab_size=20, block_size=8, n_embd=16, n_head=4, n_layer=3)
 
 
 def test_logits_have_one_score_per_vocabulary_entry_at_every_position():
@@ -39,15 +39,19 @@ def test_generate_can_run_past_the_context_length():
     assert out.shape == (1, 21)
 
 
-def test_layers_that_output_zero_pass_the_input_straight_through():
-    # Zero the last layer of attention and of the MLP, so both output exactly 0. With
-    # residual connections (x = x + layer(x)) the embeddings then reach the final norm and
-    # lm_head unchanged.
+def test_model_stacks_n_layer_blocks():
+    assert len(make_model().blocks) == 3
+
+
+def test_blocks_that_output_zero_pass_the_embeddings_straight_through():
+    # Zero every block's last attention and MLP layer. With residual connections the
+    # embeddings then reach the final norm and lm_head unchanged, however deep the stack.
     model = make_model()
     with torch.no_grad():
-        for layer in (model.attention.proj, model.mlp.net[-1]):
-            layer.weight.zero_()
-            layer.bias.zero_()
+        for block in model.blocks:
+            for layer in (block.attention.proj, block.mlp.net[-1]):
+                layer.weight.zero_()
+                layer.bias.zero_()
         idx = torch.tensor([[1, 2, 3]])
         embeddings = model.token_embedding(idx) + model.position_embedding(torch.arange(3))
         logits, _ = model(idx)

@@ -202,3 +202,13 @@ stable deep training.
 **Measurements:** val 1.831 → 1.803 (small, possibly noise for one layer); initial loss
 4.785 → 4.599. The remaining gap to ln(81) is PyTorch's default `lm_head` init.
 **Next:** Step 17: transformer blocks, stacked.
+
+## 2026-10-06 · Phase 1 · Step 17: Stacked transformer blocks
+**Objective:** Package attention + MLP + norms + residuals as a Block and stack them.
+**What I did:** `pretrain/block.py` `Block`; GPT now runs n_layer blocks (4).
+**What I learned:** Same structure, separate weights per block. Depth only helps if it is
+trainable: residuals and norms are what make it so.
+**Measurements:** 56,785 params, val 1.661 (from 1.803). Ablation with residuals and norms
+removed: val 3.125, stuck near 3.1 and worse than the bigram.
+**Anomalies:** Train/val gap 0.21 and growing: memorization starting.
+**Next:** Step 18: dropout.
