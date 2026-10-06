@@ -145,3 +145,14 @@ queries the head reduces exactly to the causal average (tested). Scaling matters
 head_size 512, unscaled softmax put 0.95 on one random position before any training.
 **Anomalies:** Attention is order-blind; it needs position embeddings.
 **Next:** Step 12: put the head in a model and train it.
+
+## 2026-10-06 · Phase 1 · Step 12: First attention model
+**Objective:** Use the head in a model and beat the bigram.
+**What I did:** `pretrain/gpt.py`: token + position embeddings → one attention head →
+`lm_head`; `generate` crops to block_size. `train.py` takes `--model bigram|gpt`.
+**What I learned:** Position embeddings give the order-blind attention a sense of place.
+The context window exists because the position table has block_size rows.
+**Measurements:** 9,361 params, block 32, n_embd 32, 5,000 steps (33 s): val 2.262 vs
+bigram 2.453. Initial loss 4.430 ≈ ln(81). Train/val gap grew to ~0.12.
+Generated timestamps now have the right four-groups-of-two-digits shape.
+**Next:** Step 13: multi-head attention.

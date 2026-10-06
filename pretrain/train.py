@@ -1,9 +1,10 @@
 """Training loop: repeatedly measure the loss and nudge the parameters to lower it.
 
-Run from the repo root:  python -m pretrain.train
+Run from the repo root:  python -m pretrain.train --model gpt     (or --model bigram)
 (-m runs it as part of the pretrain package, so its `from pretrain...` imports resolve.)
 """
 
+import argparse
 from pathlib import Path
 
 import torch
@@ -12,15 +13,27 @@ from torch import nn
 from pretrain.bigram import BigramModel
 from pretrain.char_tokenizer import CharTokenizer
 from pretrain.dataset import get_batch, train_val_split
+from pretrain.gpt import GPT
 
 TEXT_PATH = Path("data/processed/apollo11_tec.txt")
 
 # Hyperparameters: settings we choose, as opposed to parameters the model learns.
-BLOCK_SIZE = 8  # context length (the bigram model only uses the last token anyway)
-BATCH_SIZE = 32  # windows per step
-LEARNING_RATE = 1e-2  # how big each nudge is
-MAX_STEPS = 3000
-EVAL_INTERVAL = 300  # report losses every this many steps
+CONFIGS = {
+    "bigram": {
+        "block_size": 8,  # context length (the bigram model only uses the last token anyway)
+        "batch_size": 32,  # windows per step
+        "learning_rate": 1e-2,  # how big each nudge is
+        "max_steps": 3000,
+    },
+    "gpt": {
+        "block_size": 32,  # attention can use context, so give it more
+        "batch_size": 32,
+        "learning_rate": 1e-3,  # attention is less forgiving of big steps than a table
+        "max_steps": 5000,
+        "n_embd": 32,  # channels per position
+    },
+}
+EVAL_INTERVAL = 500  # report losses every this many steps
 EVAL_BATCHES = 100  # batches averaged per loss report
 
 
@@ -58,7 +71,8 @@ def estimate_loss(
     return losses
 
 
-def main() -> None:
+def main(model_name: str) -> None:
+    cfg = CONFIGS[model_name]
     torch.manual_seed(11)
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -66,31 +80,28 @@ def main() -> None:
     tok = CharTokenizer(text)
     train_data, val_data = train_val_split(torch.tensor(tok.encode(text), dtype=torch.long))
 
-    model = BigramModel(tok.vocab_size).to(device)
+    if model_name == "bigram":
+        model = BigramModel(tok.vocab_size)
+    else:
+        model = GPT(tok.vocab_size, cfg["block_size"], cfg["n_embd"])
+    model = model.to(device)
+    print(f"{model_name}: {sum(p.numel() for p in model.parameters()):,} parameters")
     # AdamW: gradient descent that also adapts the step size for each parameter.
-    optimizer = torch.optim.AdamW(model.parameters(), lr=LEARNING_RATE)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=cfg["learning_rate"])
 
-    for step in range(MAX_STEPS + 1):
+    block_size, batch_size = cfg["block_size"], cfg["batch_size"]
+    for step in range(cfg["max_steps"] + 1):
         if step % EVAL_INTERVAL == 0:
             losses = estimate_loss(
-                model, train_data, val_data, BLOCK_SIZE, BATCH_SIZE, EVAL_BATCHES, device
+                model, train_data, val_data, block_size, batch_size, EVAL_BATCHES, device
             )
             print(
                 f"step {step:5d} | train loss {losses['train']:.3f}"
                 f" | val loss {losses['val']:.3f}"
             )
-        if step < MAX_STEPS:
-            x, y = get_batch(train_data, BLOCK_SIZE, BATCH_SIZE, device)
+        if step < cfg["max_steps"]:
+            x, y = get_batch(train_data, block_size, batch_size, device)
             train_step(model, optimizer, x, y)
-
-    # What did it learn? The five most likely characters after a few starting characters.
-    with torch.no_grad():
-        for ch in ("R", "\n", "L"):
-            logits, _ = model(torch.tensor([tok.encode(ch)], device=device))
-            top = torch.topk(torch.softmax(logits[0, -1], dim=-1), 5)
-            probs, ids = top.values.tolist(), top.indices.tolist()
-            guesses = [(tok.decode([i]), round(p, 2)) for p, i in zip(probs, ids)]
-            print(f"after {ch!r}: {guesses}")
 
     # Let it write: start from a newline and sample 500 characters.
     start = torch.tensor([tok.encode("\n")], device=device)
@@ -99,4 +110,6 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument("--model", choices=CONFIGS, default="gpt")
+    main(parser.parse_args().model)
