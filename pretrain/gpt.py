@@ -33,8 +33,10 @@ class GPT(nn.Module):
         B, T = idx.shape
         positions = torch.arange(T, device=idx.device)  # 0, 1, ..., T-1
         x = self.token_embedding(idx) + self.position_embedding(positions)  # (B, T, n_embd)
-        x = self.attention(x)  # (B, T, n_embd): each position mixes in its context
-        x = self.mlp(x)  # (B, T, n_embd): each position processes what it gathered
+        # Residual connections: each layer *adds* its result to x instead of replacing it.
+        # x is a running record that every layer can read from and write to.
+        x = x + self.attention(x)  # (B, T, n_embd): each position mixes in its context
+        x = x + self.mlp(x)  # (B, T, n_embd): each position processes what it gathered
         logits = self.lm_head(x)  # (B, T, vocab_size)
         if targets is None:
             return logits, None

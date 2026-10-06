@@ -37,3 +37,17 @@ def test_generate_can_run_past_the_context_length():
     # The position table has only block_size rows, so generate must crop its context.
     out = make_model().generate(torch.tensor([[1]]), max_new_tokens=20)
     assert out.shape == (1, 21)
+
+
+def test_layers_that_output_zero_pass_the_input_straight_through():
+    # Zero the last layer of attention and of the MLP, so both output exactly 0. With
+    # residual connections (x = x + layer(x)) the embeddings then reach lm_head unchanged.
+    model = make_model()
+    with torch.no_grad():
+        for layer in (model.attention.proj, model.mlp.net[-1]):
+            layer.weight.zero_()
+            layer.bias.zero_()
+        idx = torch.tensor([[1, 2, 3]])
+        embeddings = model.token_embedding(idx) + model.position_embedding(torch.arange(3))
+        logits, _ = model(idx)
+        assert torch.allclose(logits, model.lm_head(embeddings))

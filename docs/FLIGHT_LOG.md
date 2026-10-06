@@ -178,3 +178,15 @@ position (tested: other positions can't affect it). ReLU is what stops the two l
 layers from collapsing into one, and it gives the network if-then behavior.
 **Measurements:** 18,769 params, val 1.965 (from 2.079). Gain mixes structure and size.
 **Next:** Step 15: residual connections.
+
+## 2026-10-06 · Phase 1 · Step 15: Residual connections
+**Objective:** Make layers add to x instead of replacing it.
+**What I did:** `x = x + attention(x)`, `x = x + mlp(x)` in `pretrain/gpt.py`. Test: layers
+that output zero pass the embeddings straight to `lm_head`.
+**What I learned:** The residual stream is a shared record each layer reads and adds to.
+It preserves information, makes an untrained layer harmless, and gives gradients a direct
+path back to early layers (the ResNet idea that makes depth trainable).
+**Measurements:** same 18,769 params, val 1.965 → 1.831: purely structural gain.
+**Anomalies:** Initial loss rose to 4.785 (> ln 81): large raw embeddings now reach the
+output directly. Normalization is next.
+**Next:** Step 16: layer normalization.
