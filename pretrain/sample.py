@@ -18,17 +18,25 @@ from pretrain.train import CHECKPOINT_PATH
 
 
 def continue_text(
-    model: GPT, tok: CharTokenizer, prompt: str, max_new_tokens: int, device: str = "cpu"
+    model: GPT,
+    tok: CharTokenizer,
+    prompt: str,
+    max_new_tokens: int,
+    temperature: float = 1.0,
+    device: str = "cpu",
 ) -> str:
     """Encode the prompt, let the model write max_new_tokens more, decode the whole thing."""
     idx = torch.tensor([tok.encode(prompt)], device=device)
-    return tok.decode(model.generate(idx, max_new_tokens)[0].tolist())
+    return tok.decode(model.generate(idx, max_new_tokens, temperature)[0].tolist())
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--prompt", default="\n", help="text the model continues")
     parser.add_argument("--chars", type=int, default=500, help="how many characters to add")
+    parser.add_argument(
+        "--temperature", type=float, default=1.0, help="<1 cautious, >1 adventurous"
+    )
     parser.add_argument("--seed", type=int, default=None, help="fix the dice for repeatable output")
     parser.add_argument("--checkpoint", type=Path, default=CHECKPOINT_PATH)
     args = parser.parse_args()
@@ -41,7 +49,7 @@ def main() -> None:
     # back exactly the same character-to-id mapping used in training.
     tok = CharTokenizer(vocab)
     print(f"loaded {args.checkpoint} (step {info['step']}, val loss {info['val_loss']:.3f})")
-    print(continue_text(model, tok, args.prompt, args.chars, device))
+    print(continue_text(model, tok, args.prompt, args.chars, args.temperature, device))
 
 
 if __name__ == "__main__":

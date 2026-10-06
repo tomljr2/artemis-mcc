@@ -70,3 +70,20 @@ def test_eval_mode_turns_dropout_off():
     model.eval()
     idx = torch.randint(20, (2, 8))
     assert torch.allclose(model(idx)[0], model(idx)[0])
+
+
+def test_near_zero_temperature_always_picks_the_most_likely_token():
+    # Dividing the scores by a tiny temperature makes the top choice overwhelmingly likely,
+    # so the dice stop mattering: every seed gives the same, greedy output.
+    model = make_model().eval()
+    start = torch.tensor([[1, 2, 3]])
+    outputs = []
+    for seed in (1, 2, 3):
+        torch.manual_seed(seed)
+        outputs.append(model.generate(start, max_new_tokens=10, temperature=1e-4))
+    assert torch.equal(outputs[0], outputs[1]) and torch.equal(outputs[1], outputs[2])
+    # ...and each new token is the argmax of the model's scores at that point.
+    with torch.no_grad():
+        for t in range(3, 13):
+            logits, _ = model(outputs[0][:, :t][:, -8:])
+            assert logits[0, -1].argmax() == outputs[0][0, t]

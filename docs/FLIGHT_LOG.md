@@ -267,3 +267,14 @@ out of view after 64 characters (block_size). Same seed means the same dice roll
 prompts ending in "." produced nearly identical continuations.
 **Measurements:** Checkpoint step 10,000, val 1.267. 44 tests pass.
 **Next:** Step 23: temperature.
+
+## 2026-10-06 · Phase 1 · Step 23: Temperature
+**Objective:** Control how boldly the model samples.
+**What I did:** `GPT.generate(..., temperature=1.0)` divides the scores before softmax;
+`sample.py --temperature`.
+**What I learned:** Temperature changes the odds, not the knowledge. Low → greedy, clean but
+bland and prone to repeating ("to to"); high → long shots win, and errors compound until the
+format collapses.
+**Measurements:** Same seed and prompt at 0.3 / 1.0 / 1.8: readable / as before / gibberish
+numbers and invented words. 46 tests pass.
+**Next:** Step 24: RMSNorm (Stage 2, modern deltas).

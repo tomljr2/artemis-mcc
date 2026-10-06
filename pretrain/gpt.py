@@ -52,13 +52,19 @@ class GPT(nn.Module):
         return logits, loss
 
     @torch.no_grad()
-    def generate(self, idx: torch.Tensor, max_new_tokens: int) -> torch.Tensor:
+    def generate(
+        self, idx: torch.Tensor, max_new_tokens: int, temperature: float = 1.0
+    ) -> torch.Tensor:
         """Same sampling loop as the bigram model, but the context is cropped to block_size,
-        since the position table has no rows beyond that."""
+        since the position table has no rows beyond that.
+
+        temperature divides the scores before softmax: below 1 it sharpens the odds toward
+        the top choice (cautious), above 1 it flattens them (adventurous), 1 leaves them as
+        the model learned them."""
         for _ in range(max_new_tokens):
             context = idx[:, -self.block_size :]
             logits, _ = self(context)
-            probs = F.softmax(logits[:, -1, :], dim=-1)
+            probs = F.softmax(logits[:, -1, :] / temperature, dim=-1)
             next_token = torch.multinomial(probs, num_samples=1)
             idx = torch.cat([idx, next_token], dim=1)
         return idx
