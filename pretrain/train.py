@@ -5,6 +5,7 @@ Run from the repo root:  python -m pretrain.train --model gpt     (or --model bi
 """
 
 import argparse
+import time
 from pathlib import Path
 
 import torch
@@ -26,12 +27,12 @@ CONFIGS = {
         "max_steps": 3000,
     },
     "gpt": {
-        "block_size": 32,  # attention can use context, so give it more
-        "batch_size": 32,
+        "block_size": 64,  # context length in characters
+        "batch_size": 64,
         "learning_rate": 1e-3,  # attention is less forgiving of big steps than a table
-        "max_steps": 5000,
-        "n_embd": 32,  # channels per position
-        "n_head": 4,  # attention heads, each n_embd // n_head = 8 channels wide
+        "max_steps": 10000,
+        "n_embd": 128,  # channels per position
+        "n_head": 4,  # attention heads, each n_embd // n_head = 32 channels wide
         "n_layer": 4,  # transformer blocks stacked
         # Fraction of values zeroed during training, against memorizing. Off for now: at this
         # size and 5,000 steps, 0.1 and 0.2 made val loss worse (1.661 -> 1.724 / 1.780).
@@ -103,6 +104,7 @@ def main(model_name: str) -> None:
     optimizer = torch.optim.AdamW(model.parameters(), lr=cfg["learning_rate"])
 
     block_size, batch_size = cfg["block_size"], cfg["batch_size"]
+    start_time = time.perf_counter()
     for step in range(cfg["max_steps"] + 1):
         if step % EVAL_INTERVAL == 0:
             losses = estimate_loss(
@@ -111,6 +113,7 @@ def main(model_name: str) -> None:
             print(
                 f"step {step:5d} | train loss {losses['train']:.3f}"
                 f" | val loss {losses['val']:.3f}"
+                f" | {time.perf_counter() - start_time:5.0f}s"
             )
         if step < cfg["max_steps"]:
             x, y = get_batch(train_data, block_size, batch_size, device)

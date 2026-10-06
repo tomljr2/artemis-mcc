@@ -223,3 +223,15 @@ bigram had 0.06), and val was still falling at 5,000 steps.
 **Measurements:** dropout 0 → 1.661, 0.1 → 1.724, 0.2 → 1.780 val. Default set to 0.
 **Anomalies:** I misread the step 17 gap as memorization; corrected here.
 **Next:** Step 19: scale up the model and train longer.
+
+## 2026-10-06 · Phase 1 · Step 19: Scale up
+**Objective:** Bigger model, longer training.
+**What I did:** n_embd 128, block 64, batch 64, 10,000 steps (820,817 params, 41M tokens =
+55 passes over the training text). Progress lines now show elapsed time.
+**What I learned:** Real overfitting: val loss bottoms out and then rises while train loss
+keeps falling. Chinchilla's ~20 tokens/param suggests ~16M unique tokens for this size; we
+have 0.74M. The model has outgrown the data, which is why Phase 2's corpus matters.
+**Measurements:** best val 1.317 at step 4,000 → 1.424 at 10,000 (train 0.793). 468 s,
+~5% of measured matmul throughput (small matrices, per-head Python loop, eval overhead).
+Generated sentences are new combinations, not copies (checked against the transcript).
+**Next:** Step 20: re-test dropout at this size.
