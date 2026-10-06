@@ -47,13 +47,16 @@ def causal_average(x: torch.Tensor) -> torch.Tensor:
 class AttentionHead(nn.Module):
     """One head of causal self-attention."""
 
-    def __init__(self, n_embd: int, head_size: int):
+    def __init__(self, n_embd: int, head_size: int, dropout: float = 0.0):
         super().__init__()
         # Three learned projections of each position's n_embd channels:
         self.query = nn.Linear(n_embd, head_size, bias=False)  # what am I looking for?
         self.key = nn.Linear(n_embd, head_size, bias=False)  # what do I contain?
         self.value = nn.Linear(n_embd, head_size, bias=False)  # what do I pass on if picked?
         self.head_size = head_size
+        # Randomly drops some attention weights during training, so a position can't rely
+        # on always being able to look at one particular earlier position.
+        self.dropout = nn.Dropout(dropout)
 
     def attention_weights(self, x: torch.Tensor) -> torch.Tensor:
         """(B, T, n_embd) -> (B, T, T): how much each position takes from each earlier one."""
@@ -70,25 +73,28 @@ class AttentionHead(nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """(B, T, n_embd) -> (B, T, head_size): each position's weighted mix of values."""
-        return self.attention_weights(x) @ self.value(x)
+        return self.dropout(self.attention_weights(x)) @ self.value(x)
 
 
 class MultiHeadAttention(nn.Module):
     """Several attention heads side by side, each free to focus on something different."""
 
-    def __init__(self, n_embd: int, n_head: int):
+    def __init__(self, n_embd: int, n_head: int, dropout: float = 0.0):
         super().__init__()
         if n_embd % n_head != 0:
             raise ValueError(f"n_embd ({n_embd}) must be divisible by n_head ({n_head})")
         # Split the channels between the heads: 4 heads x 8 channels = 32, the same total
         # size as one 32-wide head.
         head_size = n_embd // n_head
-        self.heads = nn.ModuleList(AttentionHead(n_embd, head_size) for _ in range(n_head))
+        self.heads = nn.ModuleList(
+            AttentionHead(n_embd, head_size, dropout) for _ in range(n_head)
+        )
         # Mixes the heads' results together. Without it, each head's findings would stay in
         # its own separate slice of channels.
         self.proj = nn.Linear(n_embd, n_embd)
+        self.dropout = nn.Dropout(dropout)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         # Each head returns (B, T, head_size); concatenating along channels gives (B, T, n_embd).
         out = torch.cat([head(x) for head in self.heads], dim=-1)
-        return self.proj(out)
+        return self.dropout(self.proj(out))

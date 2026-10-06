@@ -212,3 +212,14 @@ trainable: residuals and norms are what make it so.
 removed: val 3.125, stuck near 3.1 and worse than the bigram.
 **Anomalies:** Train/val gap 0.21 and growing: memorization starting.
 **Next:** Step 18: dropout.
+
+## 2026-10-06 · Phase 1 · Step 18: Dropout
+**Objective:** Fight memorization.
+**What I did:** `dropout` option on attention weights, attention output, and MLP output
+(GPT-2 placement). `train.py` now calls `model.eval()` before generating.
+**What I learned:** Dropout is only active in train mode. The true overfitting signal is
+val loss *rising*, not a train/val gap: part of our gap is distribution shift (even the
+bigram had 0.06), and val was still falling at 5,000 steps.
+**Measurements:** dropout 0 → 1.661, 0.1 → 1.724, 0.2 → 1.780 val. Default set to 0.
+**Anomalies:** I misread the step 17 gap as memorization; corrected here.
+**Next:** Step 19: scale up the model and train longer.

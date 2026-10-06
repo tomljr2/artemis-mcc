@@ -44,15 +44,29 @@ def test_model_stacks_n_layer_blocks():
 
 
 def test_blocks_that_output_zero_pass_the_embeddings_straight_through():
-    # Zero every block's last attention and MLP layer. With residual connections the
+    # Zero every block's last attention and MLP Linear layer (mlp.net[2]). With residuals the
     # embeddings then reach the final norm and lm_head unchanged, however deep the stack.
     model = make_model()
     with torch.no_grad():
         for block in model.blocks:
-            for layer in (block.attention.proj, block.mlp.net[-1]):
+            for layer in (block.attention.proj, block.mlp.net[2]):
                 layer.weight.zero_()
                 layer.bias.zero_()
         idx = torch.tensor([[1, 2, 3]])
         embeddings = model.token_embedding(idx) + model.position_embedding(torch.arange(3))
         logits, _ = model(idx)
         assert torch.allclose(logits, model.lm_head(model.ln_f(embeddings)), atol=1e-6)
+
+
+def test_dropout_makes_training_passes_random():
+    model = GPT(vocab_size=20, block_size=8, n_embd=16, n_head=4, n_layer=2, dropout=0.5)
+    model.train()
+    idx = torch.randint(20, (2, 8))
+    assert not torch.allclose(model(idx)[0], model(idx)[0])
+
+
+def test_eval_mode_turns_dropout_off():
+    model = GPT(vocab_size=20, block_size=8, n_embd=16, n_head=4, n_layer=2, dropout=0.5)
+    model.eval()
+    idx = torch.randint(20, (2, 8))
+    assert torch.allclose(model(idx)[0], model(idx)[0])

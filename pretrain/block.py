@@ -14,12 +14,12 @@ from pretrain.norm import LayerNorm
 
 
 class Block(nn.Module):
-    def __init__(self, n_embd: int, n_head: int):
+    def __init__(self, n_embd: int, n_head: int, dropout: float = 0.0):
         super().__init__()
         self.ln1 = LayerNorm(n_embd)
-        self.attention = MultiHeadAttention(n_embd, n_head)
+        self.attention = MultiHeadAttention(n_embd, n_head, dropout)
         self.ln2 = LayerNorm(n_embd)
-        self.mlp = FeedForward(n_embd)
+        self.mlp = FeedForward(n_embd, dropout)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = x + self.attention(self.ln1(x))  # communicate

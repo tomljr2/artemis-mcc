@@ -33,6 +33,10 @@ CONFIGS = {
         "n_embd": 32,  # channels per position
         "n_head": 4,  # attention heads, each n_embd // n_head = 8 channels wide
         "n_layer": 4,  # transformer blocks stacked
+        # Fraction of values zeroed during training, against memorizing. Off for now: at this
+        # size and 5,000 steps, 0.1 and 0.2 made val loss worse (1.661 -> 1.724 / 1.780).
+        # Revisit when the model is bigger or trains longer.
+        "dropout": 0.0,
     },
 }
 EVAL_INTERVAL = 500  # report losses every this many steps
@@ -86,7 +90,12 @@ def main(model_name: str) -> None:
         model = BigramModel(tok.vocab_size)
     else:
         model = GPT(
-            tok.vocab_size, cfg["block_size"], cfg["n_embd"], cfg["n_head"], cfg["n_layer"]
+            tok.vocab_size,
+            cfg["block_size"],
+            cfg["n_embd"],
+            cfg["n_head"],
+            cfg["n_layer"],
+            cfg["dropout"],
         )
     model = model.to(device)
     print(f"{model_name}: {sum(p.numel() for p in model.parameters()):,} parameters")
@@ -107,7 +116,9 @@ def main(model_name: str) -> None:
             x, y = get_batch(train_data, block_size, batch_size, device)
             train_step(model, optimizer, x, y)
 
-    # Let it write: start from a newline and sample 500 characters.
+    # Let it write: start from a newline and sample 500 characters. eval() switches dropout
+    # off; it is only for training.
+    model.eval()
     start = torch.tensor([tok.encode("\n")], device=device)
     print("--- generated ---")
     print(tok.decode(model.generate(start, max_new_tokens=500)[0].tolist()))

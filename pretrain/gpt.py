@@ -14,7 +14,15 @@ from pretrain.norm import LayerNorm
 
 
 class GPT(nn.Module):
-    def __init__(self, vocab_size: int, block_size: int, n_embd: int, n_head: int, n_layer: int):
+    def __init__(
+        self,
+        vocab_size: int,
+        block_size: int,
+        n_embd: int,
+        n_head: int,
+        n_layer: int,
+        dropout: float = 0.0,  # fraction of values zeroed during training
+    ):
         super().__init__()
         self.block_size = block_size
         # What each character is: one learned n_embd-vector per token id.
@@ -23,7 +31,7 @@ class GPT(nn.Module):
         # Attention by itself is order-blind; adding this gives every position a location.
         self.position_embedding = nn.Embedding(block_size, n_embd)
         # The stack: identical in shape, but each block learns its own weights.
-        self.blocks = nn.ModuleList(Block(n_embd, n_head) for _ in range(n_layer))
+        self.blocks = nn.ModuleList(Block(n_embd, n_head, dropout) for _ in range(n_layer))
         self.ln_f = LayerNorm(n_embd)  # final norm, before the output layer
         # Turns each position's n_embd numbers into one score per vocabulary entry.
         self.lm_head = nn.Linear(n_embd, vocab_size)

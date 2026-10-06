@@ -9,7 +9,7 @@ from torch import nn
 
 
 class FeedForward(nn.Module):
-    def __init__(self, n_embd: int):
+    def __init__(self, n_embd: int, dropout: float = 0.0):
         super().__init__()
         self.net = nn.Sequential(
             # Expand to 4x the channels: more room to compute. (4x is the convention from
@@ -21,6 +21,7 @@ class FeedForward(nn.Module):
             nn.ReLU(),
             # Shrink back to n_embd channels so the output fits where the input came from.
             nn.Linear(4 * n_embd, n_embd),
+            nn.Dropout(dropout),
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
