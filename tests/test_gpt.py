@@ -5,7 +5,7 @@ from pretrain.gpt import GPT
 
 def make_model() -> GPT:
     torch.manual_seed(0)
-    return GPT(vocab_size=20, block_size=8, n_embd=16)
+    return GPT(vocab_size=20, block_size=8, n_embd=16, n_head=4)
 
 
 def test_logits_have_one_score_per_vocabulary_entry_at_every_position():

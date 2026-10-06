@@ -31,6 +31,7 @@ CONFIGS = {
         "learning_rate": 1e-3,  # attention is less forgiving of big steps than a table
         "max_steps": 5000,
         "n_embd": 32,  # channels per position
+        "n_head": 4,  # attention heads, each n_embd // n_head = 8 channels wide
     },
 }
 EVAL_INTERVAL = 500  # report losses every this many steps
@@ -83,7 +84,7 @@ def main(model_name: str) -> None:
     if model_name == "bigram":
         model = BigramModel(tok.vocab_size)
     else:
-        model = GPT(tok.vocab_size, cfg["block_size"], cfg["n_embd"])
+        model = GPT(tok.vocab_size, cfg["block_size"], cfg["n_embd"], cfg["n_head"])
     model = model.to(device)
     print(f"{model_name}: {sum(p.numel() for p in model.parameters()):,} parameters")
     # AdamW: gradient descent that also adapts the step size for each parameter.

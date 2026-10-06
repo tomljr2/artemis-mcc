@@ -1,6 +1,12 @@
+import pytest
 import torch
 
-from pretrain.attention import AttentionHead, causal_average, causal_average_weights
+from pretrain.attention import (
+    AttentionHead,
+    MultiHeadAttention,
+    causal_average,
+    causal_average_weights,
+)
 
 
 def test_weights_spread_evenly_over_the_current_and_earlier_positions():
@@ -58,3 +64,23 @@ def test_head_with_zero_queries_is_the_causal_average_of_the_values():
         head.query.weight.zero_()
         x = torch.randn(2, 5, 16)
         assert torch.allclose(head(x), causal_average(head.value(x)), atol=1e-6)
+
+
+def test_multi_head_output_has_n_embd_channels():
+    mha = MultiHeadAttention(n_embd=16, n_head=4)
+    assert len(mha.heads) == 4
+    assert mha(torch.randn(2, 5, 16)).shape == (2, 5, 16)
+
+
+def test_heads_split_the_channels_evenly():
+    with pytest.raises(ValueError, match="divisible"):
+        MultiHeadAttention(n_embd=16, n_head=3)
+
+
+def test_multi_head_cannot_see_the_future():
+    mha = MultiHeadAttention(n_embd=16, n_head=4)
+    x = torch.randn(1, 6, 16)
+    changed = x.clone()
+    changed[:, 3:] = torch.randn(1, 3, 16)
+    with torch.no_grad():
+        assert torch.allclose(mha(x)[:, :3], mha(changed)[:, :3])

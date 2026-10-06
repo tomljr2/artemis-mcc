@@ -156,3 +156,15 @@ The context window exists because the position table has block_size rows.
 bigram 2.453. Initial loss 4.430 ≈ ln(81). Train/val gap grew to ~0.12.
 Generated timestamps now have the right four-groups-of-two-digits shape.
 **Next:** Step 13: multi-head attention.
+
+## 2026-10-06 · Phase 1 · Step 13: Multi-head attention
+**Objective:** Let several attention patterns run side by side.
+**What I did:** `MultiHeadAttention`: n_head heads of n_embd/n_head channels, concatenate,
+then a learned output projection. GPT uses 4 heads × 8 channels.
+**What I learned:** Heads specialize because each starts from different random weights and
+redundancy doesn't lower the loss. Specialization is encouraged, not guaranteed. A larger
+context only helps if the model can use it; attention cost grows with the square of T.
+**Measurements (single seed, 5,000 steps):** 1 head 2.262 → 4 heads, same 9,361 params,
+2.146 → plus projection (10,417 params) 2.079. Context sweep with 4 heads + proj:
+block 8 → 2.180, 32 → 2.079, 128 → 2.140 (too small a model to use 128).
+**Next:** Step 14: feed-forward (MLP).

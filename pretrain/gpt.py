@@ -1,6 +1,6 @@
 """The Artemis I language model. It starts small and grows into a full GPT step by step.
 
-Current version: token embeddings + position embeddings -> one attention head -> output
+Current version: token embeddings + position embeddings -> multi-head attention -> output
 layer. Compared with the bigram model, each position can now look back at its context.
 """
 
@@ -8,11 +8,11 @@ import torch
 import torch.nn.functional as F
 from torch import nn
 
-from pretrain.attention import AttentionHead
+from pretrain.attention import MultiHeadAttention
 
 
 class GPT(nn.Module):
-    def __init__(self, vocab_size: int, block_size: int, n_embd: int):
+    def __init__(self, vocab_size: int, block_size: int, n_embd: int, n_head: int):
         super().__init__()
         self.block_size = block_size
         # What each character is: one learned n_embd-vector per token id.
@@ -20,7 +20,7 @@ class GPT(nn.Module):
         # Where each character is: one learned n_embd-vector per position 0..block_size-1.
         # Attention by itself is order-blind; adding this gives every position a location.
         self.position_embedding = nn.Embedding(block_size, n_embd)
-        self.attention = AttentionHead(n_embd, head_size=n_embd)
+        self.attention = MultiHeadAttention(n_embd, n_head)
         # Turns each position's n_embd numbers into one score per vocabulary entry.
         self.lm_head = nn.Linear(n_embd, vocab_size)
 

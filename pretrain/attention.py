@@ -71,3 +71,24 @@ class AttentionHead(nn.Module):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """(B, T, n_embd) -> (B, T, head_size): each position's weighted mix of values."""
         return self.attention_weights(x) @ self.value(x)
+
+
+class MultiHeadAttention(nn.Module):
+    """Several attention heads side by side, each free to focus on something different."""
+
+    def __init__(self, n_embd: int, n_head: int):
+        super().__init__()
+        if n_embd % n_head != 0:
+            raise ValueError(f"n_embd ({n_embd}) must be divisible by n_head ({n_head})")
+        # Split the channels between the heads: 4 heads x 8 channels = 32, the same total
+        # size as one 32-wide head.
+        head_size = n_embd // n_head
+        self.heads = nn.ModuleList(AttentionHead(n_embd, head_size) for _ in range(n_head))
+        # Mixes the heads' results together. Without it, each head's findings would stay in
+        # its own separate slice of channels.
+        self.proj = nn.Linear(n_embd, n_embd)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        # Each head returns (B, T, head_size); concatenating along channels gives (B, T, n_embd).
+        out = torch.cat([head(x) for head in self.heads], dim=-1)
+        return self.proj(out)
