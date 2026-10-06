@@ -168,3 +168,13 @@ context only helps if the model can use it; attention cost grows with the square
 2.146 → plus projection (10,417 params) 2.079. Context sweep with 4 heads + proj:
 block 8 → 2.180, 32 → 2.079, 128 → 2.140 (too small a model to use 128).
 **Next:** Step 14: feed-forward (MLP).
+
+## 2026-10-06 · Phase 1 · Step 14: Feed-forward MLP
+**Objective:** Let each position process what attention gathered.
+**What I did:** `pretrain/mlp.py` `FeedForward`: Linear n→4n, ReLU, Linear 4n→n, applied
+per position. GPT now runs attention then MLP.
+**What I learned:** Attention communicates across positions; the MLP computes within each
+position (tested: other positions can't affect it). ReLU is what stops the two linear
+layers from collapsing into one, and it gives the network if-then behavior.
+**Measurements:** 18,769 params, val 1.965 (from 2.079). Gain mixes structure and size.
+**Next:** Step 15: residual connections.
