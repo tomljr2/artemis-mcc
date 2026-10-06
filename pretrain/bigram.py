@@ -30,3 +30,18 @@ class BigramModel(nn.Module):
         B, T, V = logits.shape
         loss = F.cross_entropy(logits.view(B * T, V), targets.view(B * T))
         return logits, loss
+
+    @torch.no_grad()
+    def generate(self, idx: torch.Tensor, max_new_tokens: int) -> torch.Tensor:
+        """Extend idx (B, T) by max_new_tokens tokens, one at a time.
+
+        Each step: predict scores for the next token, turn them into probabilities, draw one
+        token at random according to those probabilities, append it, and repeat.
+        """
+        for _ in range(max_new_tokens):
+            logits, _ = self(idx)
+            last = logits[:, -1, :]  # only the final position predicts the *next* token
+            probs = F.softmax(last, dim=-1)
+            next_token = torch.multinomial(probs, num_samples=1)  # (B, 1)
+            idx = torch.cat([idx, next_token], dim=1)
+        return idx

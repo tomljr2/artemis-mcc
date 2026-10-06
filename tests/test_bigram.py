@@ -29,3 +29,22 @@ def test_loss_is_ln_vocab_size_when_every_token_is_equally_likely():
     idx = torch.randint(81, (4, 8))
     _, loss = model(idx, targets=torch.randint(81, (4, 8)))
     assert math.isclose(loss.item(), math.log(81), rel_tol=1e-6)
+
+
+def test_generate_appends_new_tokens_after_the_prompt():
+    model = BigramModel(vocab_size=10)
+    prompt = torch.tensor([[3, 1]])
+    out = model.generate(prompt, max_new_tokens=5)
+    assert out.shape == (1, 7)
+    assert torch.equal(out[:, :2], prompt)
+
+
+def test_generate_samples_from_the_learned_table():
+    # Make "next token = current token + 1" overwhelmingly likely; sampling should follow it.
+    model = BigramModel(vocab_size=10)
+    with torch.no_grad():
+        model.table.weight.fill_(-100.0)
+        for k in range(10):
+            model.table.weight[k, (k + 1) % 10] = 100.0
+    out = model.generate(torch.tensor([[7]]), max_new_tokens=5)
+    assert out.tolist() == [[7, 8, 9, 0, 1, 2]]

@@ -114,3 +114,14 @@ frequencies.
 **Measurements:** loss 4.886 → 2.398 train / 2.464 val, flat after ~1,000 steps: the bigram
 ceiling (≈9% average probability on the right character). Learned R→o 39%, L→M 54% (LMP).
 **Next:** Step 9: generate text from the bigram model.
+
+## 2026-10-06 · Phase 1 · Step 9: Generation
+**Objective:** Make the model write.
+**What I did:** `BigramModel.generate`: forward, take the last position's scores, softmax,
+sample, append, repeat.
+**What I learned:** Generation is the same loop chat models use. Sampling (not argmax)
+avoids loops: argmax after "\n" would print newlines forever.
+**Anomalies:** Output is locally plausible pairs ("th", "ou") with broken structure:
+timestamps like "47016" because counting digits needs more than one character of memory.
+This is the motivation for attention.
+**Next:** Step 10: averaging the past as a matrix multiply.

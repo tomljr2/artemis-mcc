@@ -92,6 +92,11 @@ def main() -> None:
             guesses = [(tok.decode([i]), round(p, 2)) for p, i in zip(probs, ids)]
             print(f"after {ch!r}: {guesses}")
 
+    # Let it write: start from a newline and sample 500 characters.
+    start = torch.tensor([tok.encode("\n")], device=device)
+    print("--- generated ---")
+    print(tok.decode(model.generate(start, max_new_tokens=500)[0].tolist()))
+
 
 if __name__ == "__main__":
     main()
