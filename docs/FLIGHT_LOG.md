@@ -65,3 +65,14 @@ quantities: "R"=45 is not "close" to "S"=46. They are row indices into a learned
 table, which is where meaning comes from.
 **Measurements:** vocab 81; the full transcript round-trips exactly (826,031 ids).
 **Next:** Step 5: train/validation split.
+
+## 2026-10-06 · Phase 1 · Step 5: Train/validation split
+**Objective:** Hold out data so we can tell learning from memorizing.
+**What I did:** `pretrain/dataset.py` `train_val_split`: first 90% train, last 10% val.
+**What I learned:** Validation loss is the only honest signal of generalization; training
+loss falling while validation loss rises means overfitting. Split by position, not at
+random, since a model predicting from context would otherwise be graded on text whose
+neighbours it already trained on (the same idea as holding out whole documents later).
+**Measurements:** train 743,427 ids (launch → day 6), val 82,604 ids (day 6 → splashdown).
+Expect val loss slightly above train loss: different mission phase, different vocabulary.
+**Next:** Step 6: batches of context windows.
