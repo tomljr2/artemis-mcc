@@ -125,3 +125,12 @@ avoids loops: argmax after "\n" would print newlines forever.
 timestamps like "47016" because counting digits needs more than one character of memory.
 This is the motivation for attention.
 **Next:** Step 10: averaging the past as a matrix multiply.
+
+## 2026-10-06 · Phase 1 · Step 10: Averaging the past
+**Objective:** Let a position use its context, in the simplest way.
+**What I did:** `pretrain/attention.py`: `causal_average_weights` (zero scores → mask the
+future with −inf → softmax) and `causal_average` (weights @ x).
+**What I learned:** Positions carry vectors (channels). A weighted sum over positions is one
+matrix multiply. The lower-triangular mask is what keeps the future from leaking. Real
+attention only changes the scores: query · key instead of zeros.
+**Next:** Step 11: a single self-attention head.
