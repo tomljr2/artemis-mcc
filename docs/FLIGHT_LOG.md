@@ -134,3 +134,14 @@ future with −inf → softmax) and `causal_average` (weights @ x).
 matrix multiply. The lower-triangular mask is what keeps the future from leaking. Real
 attention only changes the scores: query · key instead of zeros.
 **Next:** Step 11: a single self-attention head.
+
+## 2026-10-06 · Phase 1 · Step 11: Self-attention head
+**Objective:** Replace equal weights with learned, content-based ones.
+**What I did:** `AttentionHead` in `pretrain/attention.py`: query/key/value projections,
+scores = q·k / √head_size, mask the future, softmax, weights @ values. Shared
+`mask_future` helper.
+**What I learned:** Score (t, s) is the dot product of t's query with s's key. With zero
+queries the head reduces exactly to the causal average (tested). Scaling matters: at
+head_size 512, unscaled softmax put 0.95 on one random position before any training.
+**Anomalies:** Attention is order-blind; it needs position embeddings.
+**Next:** Step 12: put the head in a model and train it.
