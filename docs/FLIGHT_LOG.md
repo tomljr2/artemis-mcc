@@ -101,3 +101,16 @@ loss of a uniform guess, the sanity check for any untrained model.
 **Measurements:** 6,561 parameters. Untrained loss 4.887 vs ln(81) = 4.394: random initial
 scores make the model confidently wrong, which costs ~0.5 over a uniform guess.
 **Next:** Step 8: training loop.
+
+## 2026-10-06 · Phase 1 · Step 8: Training loop
+**Objective:** Make the loss go down.
+**What I did:** `pretrain/train.py`: `train_step` (forward, zero_grad, backward, step) and
+`estimate_loss` (averaged train/val loss); AdamW, lr 1e-2, 3,000 steps of 32×8.
+**What I learned:** Backprop walks the forward computation in reverse (chain rule) and
+returns every parameter's gradient in one pass. For softmax + cross-entropy the gradient on
+each score is (predicted probability − correct answer). Gradient descent: value −= lr ×
+gradient. Batch gradients average competing evidence, so probabilities settle at the true
+frequencies.
+**Measurements:** loss 4.886 → 2.398 train / 2.464 val, flat after ~1,000 steps: the bigram
+ceiling (≈9% average probability on the right character). Learned R→o 39%, L→M 54% (LMP).
+**Next:** Step 9: generate text from the bigram model.

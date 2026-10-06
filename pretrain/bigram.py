@@ -6,8 +6,8 @@ table so that likely next tokens score high.
 """
 
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
+from torch import nn
 
 
 class BigramModel(nn.Module):

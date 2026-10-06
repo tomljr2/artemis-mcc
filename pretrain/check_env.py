@@ -41,7 +41,7 @@ def main() -> None:
     print(f"compute capability: {props.major}.{props.minor}")
 
     for dtype in (torch.float32, torch.float16):
-        print(f"{str(dtype):>14} matmul: {matmul_tflops(dtype):6.2f} TFLOPS")
+        print(f"{dtype!s:>14} matmul: {matmul_tflops(dtype):6.2f} TFLOPS")
 
 
 if __name__ == "__main__":
