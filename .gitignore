@@ -1,0 +1,38 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+
+# IDE (shared project files in .idea/ are tracked; personal ones are ignored)
+.idea/workspace.xml
+.idea/shelf/
+.vscode/
+
+# Training artifacts (publish to Hugging Face / W&B, not git)
+checkpoints/
+*.pt
+*.bin
+*.safetensors
+*.gguf
+wandb/
+runs/
+
+# Data (raw and processed corpora are too big for git; the code and license log are tracked)
+data/raw/
+data/processed/
+data/cache/
+*.parquet
+*.ndjson
+
+# Secrets
+.env
+
+# Claude Code (local assistant config)
+CLAUDE.md
+CLAUDE.local.md
+.claude/

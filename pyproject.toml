@@ -1,0 +1,19 @@
+[project]
+name = "artemis"
+version = "0.0.0"
+description = "An aerospace-specialist LLM with a mission-control go/no-go verification layer."
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.12"
+dependencies = [
+    "numpy",
+    "torch",
+]
+
+[project.optional-dependencies]
+pretrain = ["tiktoken", "datasets", "matplotlib"]
+data = ["requests", "datasketch"]
+dev = ["pytest", "ruff"]
+
+[tool.ruff]
+line-length = 100
