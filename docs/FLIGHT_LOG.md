@@ -29,3 +29,14 @@ normalized line endings, and added setup instructions to the README.
 to guess when there are several. Pip on Windows installs CPU-only PyTorch unless you point
 it at a CUDA wheel index, and the GTX 1080 needs the `cu126` builds.
 **Next:** Phase 1, step 1: install PyTorch.
+
+## 2026-10-06 · Phase 1 · Steps 1–2: PyTorch and GPU throughput
+**Objective:** Get PyTorch running on the GTX 1080 and measure its speed.
+**What I did:** Installed torch 2.14.1+cu126 and wrote `pretrain/check_env.py`, which times
+4096×4096 matmuls.
+**What I learned:** LLMs are mostly matrix multiplications, so matmul throughput sets
+training speed. GPU calls are asynchronous; you must `synchronize()` before timing. One
+n×n matmul is 2n³ operations. Training costs about 6 × params × tokens operations.
+**Measurements:** fp32 8.07 TFLOPS, fp16 8.46 TFLOPS (no tensor cores on Pascal, so fp16
+only saves memory). A 10M-param model on 100M tokens ≈ 30 min locally at ~40% utilization.
+**Next:** Step 3: get a small text dataset and look at its characters.

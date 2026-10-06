@@ -5,7 +5,8 @@ reviewed, and committed with a Flight Log entry before the next one starts.
 
 ## Hardware notes (local GTX 1080, 8 GB)
 
-- Pascal, compute capability 6.1: train in **fp32** (or fp16 + `GradScaler`). No bf16.
+- Pascal, compute capability 6.1: train in **fp32**. No bf16. Measured matmul throughput
+  (`check_env.py`): fp32 8.1 TFLOPS, fp16 8.5 TFLOPS, so fp16 saves memory but not time.
 - `torch.compile` needs Triton on compute 7.0+, so skip it locally.
 - Fits comfortably: models up to ~10 to 30M parameters with context 256 to 512. That is
   plenty for debugging, overfitting tests, and loss-curve sanity checks.
