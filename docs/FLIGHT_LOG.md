@@ -76,3 +76,16 @@ neighbours it already trained on (the same idea as holding out whole documents l
 **Measurements:** train 743,427 ids (launch → day 6), val 82,604 ids (day 6 → splashdown).
 Expect val loss slightly above train loss: different mission phase, different vocabulary.
 **Next:** Step 6: batches of context windows.
+
+## 2026-10-06 · Phase 1 · Step 6: Batches
+**Objective:** Turn the token stream into training examples.
+**What I did:** `get_batch` in `pretrain/dataset.py` cuts random windows; targets are the
+inputs shifted left by one. Also corrected the release mapping to NASA's February 2026
+Artemis restructure (III = Earth-orbit docking test, IV = first landing).
+**What I learned:** Training is self-supervised: the "label" for each position is just the
+next character, which the text already contains. One window of 8 holds 8 examples, with
+contexts from 1 to 8 characters. Tensors have shapes, `(batch, block)`, and batches move
+to the GPU with `.to(device)` while the dataset stays on the CPU.
+**Anomalies:** Timestamps are a noticeable share of the text and their digits are nearly
+unpredictable, which puts a floor under the achievable loss.
+**Next:** Step 7: bigram model and its loss before training.
