@@ -256,3 +256,14 @@ overfitting late in the run. `weights_only=True` makes loading safe.
 **Measurements:** Full run saved step 10,000, val 1.267 (3.3 MB). Reloaded model matches the
 saved one exactly in tests.
 **Next:** Step 22: sample from the checkpoint with a custom prompt.
+
+## 2026-10-06 · Phase 1 · Step 22: Sampling from the checkpoint
+**Objective:** Use the trained model without retraining it.
+**What I did:** `pretrain/sample.py`: `continue_text` plus a CLI with `--prompt`, `--chars`,
+`--seed`, `--checkpoint`. The tokenizer is rebuilt from the saved vocab.
+**What I learned:** Inference is just the forward pass in a loop: ~7 s versus 8 min to
+train. The prompt sets the scene ("Tranquility Base" → "Neil, this is Houston"), but it falls
+out of view after 64 characters (block_size). Same seed means the same dice rolls, so two
+prompts ending in "." produced nearly identical continuations.
+**Measurements:** Checkpoint step 10,000, val 1.267. 44 tests pass.
+**Next:** Step 23: temperature.
