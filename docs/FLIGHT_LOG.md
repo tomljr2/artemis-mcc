@@ -190,3 +190,15 @@ path back to early layers (the ResNet idea that makes depth trainable).
 **Anomalies:** Initial loss rose to 4.785 (> ln 81): large raw embeddings now reach the
 output directly. Normalization is next.
 **Next:** Step 16: layer normalization.
+
+## 2026-10-06 · Phase 1 · Step 16: Layer normalization
+**Objective:** Keep the residual stream at a readable scale.
+**What I did:** Hand-written `LayerNorm` in `pretrain/norm.py` (mean, variance, normalize,
+learned scale and shift), tested against `nn.LayerNorm`. Pre-norm placement: ln1 before
+attention, ln2 before the MLP, ln_f before `lm_head`.
+**What I learned:** Pre-norm normalizes what each layer reads but leaves the residual path
+untouched, so the gradient express lane survives. GPT-2 moved norms before layers for
+stable deep training.
+**Measurements:** val 1.831 → 1.803 (small, possibly noise for one layer); initial loss
+4.785 → 4.599. The remaining gap to ln(81) is PyTorch's default `lm_head` init.
+**Next:** Step 17: transformer blocks, stacked.
