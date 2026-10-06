@@ -1,6 +1,7 @@
 import torch
 
 from pretrain.gpt import GPT
+from pretrain.norm import LayerNorm, RMSNorm
 
 
 def make_model() -> GPT:
@@ -87,3 +88,9 @@ def test_near_zero_temperature_always_picks_the_most_likely_token():
         for t in range(3, 13):
             logits, _ = model(outputs[0][:, :t][:, -8:])
             assert logits[0, -1].argmax() == outputs[0][0, t]
+
+
+def test_every_norm_in_the_model_is_rms_norm():
+    norms = [m for m in make_model().modules() if isinstance(m, (LayerNorm, RMSNorm))]
+    assert len(norms) == 2 * 3 + 1  # two per block, plus the final norm
+    assert all(isinstance(m, RMSNorm) for m in norms)

@@ -10,15 +10,15 @@ from torch import nn
 
 from pretrain.attention import MultiHeadAttention
 from pretrain.mlp import FeedForward
-from pretrain.norm import LayerNorm
+from pretrain.norm import RMSNorm
 
 
 class Block(nn.Module):
     def __init__(self, n_embd: int, n_head: int, dropout: float = 0.0):
         super().__init__()
-        self.ln1 = LayerNorm(n_embd)
+        self.ln1 = RMSNorm(n_embd)
         self.attention = MultiHeadAttention(n_embd, n_head, dropout)
-        self.ln2 = LayerNorm(n_embd)
+        self.ln2 = RMSNorm(n_embd)
         self.mlp = FeedForward(n_embd, dropout)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:

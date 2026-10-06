@@ -278,3 +278,14 @@ format collapses.
 **Measurements:** Same seed and prompt at 0.3 / 1.0 / 1.8: readable / as before / gibberish
 numbers and invented words. 46 tests pass.
 **Next:** Step 24: RMSNorm (Stage 2, modern deltas).
+
+## 2026-10-06 · Phase 1 · Step 24: RMSNorm (Stage 2 begins)
+**Objective:** First modern delta: replace LayerNorm with RMSNorm.
+**What I did:** `RMSNorm` in `pretrain/norm.py` (divide by root mean square, learned scale,
+no shift); all 9 norms in the model switched.
+**What I learned:** The useful part of normalization is keeping numbers a steady size;
+re-centering and the shift can go. Simpler, fewer parameters, same quality.
+**Measurements:** 819,665 params (-1,152). Best val 1.260 at step 10,000 vs 1.267 (one seed,
+within likely noise), 456 s vs 468 s. Val still falling at the end. 51 tests pass.
+**Anomalies:** Old LayerNorm checkpoints no longer load (they carry shift weights).
+**Next:** Step 25: RoPE.
