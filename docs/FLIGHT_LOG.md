@@ -411,3 +411,13 @@ because the first positions of a window have too little context to tell targets 
 **Measurements:** Small: 3.195 -> 0.022 (bug: 3.195 -> 3.195). Real size: 4.734 -> 0.023
 by step 250. 75 tests pass.
 **Next:** Plot loss curves.
+
+## 2026-10-07 · Phase 1 · Step: Loss curves
+**Objective:** See training as charts, not number tables.
+**What I did:** `pretrain/plot_losses.py` parses training printouts (old and new formats)
+and draws a PNG; charts in `docs/curves/` for transcript-only and transcript + books runs.
+**What I learned:** Running out of data looks like a flat val line with train still
+sliding down (transcript only). More data keeps all lines falling together, bending
+toward flat. The smaller transcript val set is visibly noisier.
+**Measurements:** 77 tests pass. Phase 1, Stages 1 and 2 complete.
+**Next:** Phase 1, Stage 3: BPE tokenizer, starting with a toy example.

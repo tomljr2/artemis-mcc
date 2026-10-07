@@ -34,8 +34,8 @@ reviewed, and committed with a Flight Log entry before the next one starts.
 - [x] Swap learned positional embeddings → RoPE.
 - [x] Compute all attention heads in one batch instead of a loop.
 - [x] Swap the MLP → SwiGLU (ours was ReLU, not GELU).
-- [ ] Each swap: one commit, one before/after loss curve at the same step count. (One
-      commit each, with before/after numbers in the Flight Log; curves not yet plotted.)
+- [x] Each swap: one commit, before/after numbers in the Flight Log. Loss curves:
+      `pretrain/plot_losses.py`, charts in `docs/curves/`.
 
 **Stage 3: tokenizer**
 - [ ] `tokenizer.py`: byte-level BPE trained on FineWeb-Edu + NASA text.

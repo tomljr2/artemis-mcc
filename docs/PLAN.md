@@ -100,8 +100,7 @@ Every phase ends in a public artifact. No phase starts until the previous gate p
 Phases 1 and 2 can overlap.
 
 ### Phase 1 · Artemis I
-- [ ] Reimplement a GPT from an empty file (Zero to Hero), then upgrade with RoPE, RMSNorm, SwiGLU.
-      (Done except plotted loss curves. See pretrain/README.md.)
+- [x] Reimplement a GPT from an empty file (Zero to Hero), then upgrade with RoPE, RMSNorm, SwiGLU.
 - [ ] Train a BPE tokenizer on FineWeb-Edu + NASA text; compare aerospace splits vs a stock tokenizer.
 - [ ] Reproduce a small-depth nanochat run, swap in your own model code, match its loss curve.
 - [ ] Final run mixing general text with the NASA corpus. Publish curves and writeup 1.
