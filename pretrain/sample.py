@@ -11,7 +11,7 @@ from pathlib import Path
 
 import torch
 
-from pretrain.char_tokenizer import CharTokenizer
+from pretrain.bpe import BPETokenizer
 from pretrain.checkpoint import load_checkpoint
 from pretrain.gpt import GPT
 from pretrain.train import CHECKPOINT_PATH
@@ -19,7 +19,7 @@ from pretrain.train import CHECKPOINT_PATH
 
 def continue_text(
     model: GPT,
-    tok: CharTokenizer,
+    tok: BPETokenizer,
     prompt: str,
     max_new_tokens: int,
     temperature: float = 1.0,
@@ -33,7 +33,7 @@ def continue_text(
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--prompt", default="\n", help="text the model continues")
-    parser.add_argument("--chars", type=int, default=500, help="how many characters to add")
+    parser.add_argument("--tokens", type=int, default=200, help="how many tokens to add")
     parser.add_argument(
         "--temperature", type=float, default=1.0, help="<1 cautious, >1 adventurous"
     )
@@ -44,12 +44,10 @@ def main() -> None:
     if args.seed is not None:
         torch.manual_seed(args.seed)
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    model, vocab, info = load_checkpoint(args.checkpoint, device)
-    # The saved vocab is every character in id order, so rebuilding a tokenizer from it gives
-    # back exactly the same character-to-id mapping used in training.
-    tok = CharTokenizer(vocab)
+    # The checkpoint carries its own tokenizer, so text is cut exactly as in training.
+    model, tok, info = load_checkpoint(args.checkpoint, device)
     print(f"loaded {args.checkpoint} (step {info['step']}, val loss {info['val_loss']:.3f})")
-    print(continue_text(model, tok, args.prompt, args.chars, args.temperature, device))
+    print(continue_text(model, tok, args.prompt, args.tokens, args.temperature, device))
 
 
 if __name__ == "__main__":

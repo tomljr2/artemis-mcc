@@ -4,7 +4,7 @@ import torch
 
 from pretrain.bigram import BigramModel
 from pretrain.gpt import GPT
-from pretrain.train import estimate_loss, train_step
+from pretrain.train import estimate_loss, loss_per_char, train_step
 
 
 def test_train_step_lowers_the_loss_on_a_repeated_batch():
@@ -45,3 +45,8 @@ def test_gpt_can_memorize_a_single_batch():
         last = train_step(model, optimizer, x, y)
     assert first > 2.5  # starts near ln(20) = 3.0, i.e. guessing
     assert last < 0.05
+
+
+def test_loss_per_character_spreads_the_token_loss_over_its_characters():
+    # A token loss of 2.5 on tokens that average 2.5 characters = 1.0 per character.
+    assert math.isclose(loss_per_char(2.5, n_chars=250, n_tokens=100), 1.0)

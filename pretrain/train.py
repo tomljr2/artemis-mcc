@@ -12,7 +12,7 @@ import torch
 from torch import nn
 
 from pretrain.bigram import BigramModel
-from pretrain.char_tokenizer import CharTokenizer
+from pretrain.bpe import BPETokenizer
 from pretrain.checkpoint import save_checkpoint
 from pretrain.dataset import get_batch, make_splits
 from pretrain.gpt import GPT
@@ -20,6 +20,7 @@ from pretrain.gpt import GPT
 TEXT_PATH = Path("data/processed/apollo11_tec.txt")
 BOOKS_DIR = Path("data/processed/nasa_books")  # made by: python -m data.prepare_nasa_books
 VAL_BOOKS = {"sp-350"}  # Apollo Expeditions to the Moon: held out whole, never trained on
+TOKENIZER_PATH = Path("checkpoints/tokenizer_1024.json")  # python -m pretrain.train_tokenizer
 CHECKPOINT_PATH = Path("checkpoints/gpt_nasa.pt")  # git-ignored
 
 # Hyperparameters: settings we choose, as opposed to parameters the model learns.
@@ -64,6 +65,15 @@ def train_step(
     return loss.item()
 
 
+def loss_per_char(loss_per_token: float, n_chars: int, n_tokens: int) -> float:
+    """Convert a per-token loss to per-character, so tokenizers can be compared fairly.
+
+    The loss on a text is its total surprise divided by how many pieces it was cut into.
+    Same text, same total surprise, but more characters than tokens: spread it per character.
+    """
+    return loss_per_token * n_tokens / n_chars
+
+
 @torch.no_grad()  # evaluation only: skip the bookkeeping that backprop would need
 def estimate_loss(
     model: nn.Module,
@@ -94,14 +104,14 @@ def main(model_name: str) -> None:
     transcript = TEXT_PATH.read_text(encoding="utf-8")
     books = {p.stem: p.read_text(encoding="utf-8") for p in sorted(BOOKS_DIR.glob("*.txt"))}
     train_text, val_texts = make_splits(transcript, books, VAL_BOOKS)
-    # The vocabulary must cover every character the model will be asked about, val included.
-    tok = CharTokenizer(train_text + "".join(val_texts.values()))
+    tok = BPETokenizer.load(TOKENIZER_PATH)
+    texts = {"train": train_text, **val_texts}
     splits = {
-        name: torch.tensor(tok.encode(text), dtype=torch.long)
-        for name, text in {"train": train_text, **val_texts}.items()
+        name: torch.tensor(tok.encode(text), dtype=torch.long) for name, text in texts.items()
     }
     for name, data in splits.items():
-        print(f"{name}: {len(data):,} characters")
+        print(f"{name}: {len(texts[name]):,} characters -> {len(data):,} tokens")
+    print("losses below are per character, to compare with the character-level model")
     train_data = splits["train"]
 
     if model_name == "bigram":
@@ -127,6 +137,10 @@ def main(model_name: str) -> None:
     for step in range(cfg["max_steps"] + 1):
         if step % EVAL_INTERVAL == 0:
             losses = estimate_loss(model, splits, block_size, batch_size, EVAL_BATCHES, device)
+            losses = {
+                name: loss_per_char(loss, len(texts[name]), len(splits[name]))
+                for name, loss in losses.items()
+            }
             # One number to pick the best model by: the average of the two validation sets.
             losses["val"] = (losses["val transcript"] + losses["val book"]) / 2
             print(
@@ -139,14 +153,13 @@ def main(model_name: str) -> None:
             # overfit, the saved copy is still the version that did best on unseen text.
             if model_name == "gpt" and losses["val"] < best_val_loss:
                 best_val_loss = losses["val"]
-                vocab = tok.decode(list(range(tok.vocab_size)))  # every character, in id order
-                save_checkpoint(CHECKPOINT_PATH, model, gpt_args, vocab, step, best_val_loss)
+                save_checkpoint(CHECKPOINT_PATH, model, gpt_args, tok, step, best_val_loss)
                 print(f"           saved new best to {CHECKPOINT_PATH}")
         if step < cfg["max_steps"]:
             x, y = get_batch(train_data, block_size, batch_size, device)
             train_step(model, optimizer, x, y)
 
-    # Let it write: start from a newline and sample 500 characters. eval() switches dropout
+    # Let it write: start from a newline and sample 500 tokens. eval() switches dropout
     # off; it is only for training.
     model.eval()
     start = torch.tensor([tok.encode("\n")], device=device)

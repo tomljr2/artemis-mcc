@@ -480,3 +480,13 @@ comparable to per-character ones.
 **Measurements:** 141 s to train; 4.79M chars -> 1.91M tokens (2.51 chars/token);
 13 KB file. 90 tests pass.
 **Next:** Train the GPT on BPE tokens; report loss per character too.
+
+## 2026-10-07 · Phase 1 · Stage 3 · Step 6: Train the GPT on BPE tokens (code)
+**Objective:** Switch the model from characters to 1,024 BPE tokens.
+**What I did:** `train.py` loads `checkpoints/tokenizer_1024.json` and reports every loss
+per character (`loss_per_char`), so results compare with the character model.
+Checkpoints store the tokenizer's merges; `sample.py` uses them (`--tokens`).
+**What I learned:** Per-token and per-character losses measure different things; divide by
+characters per token to compare tokenizers fairly.
+**Measurements:** 92 tests pass. The 40,000-step run's results go in the next entry.
+**Anomalies:** Piping training output through `tee` buffers it until the end; use `-u`.
