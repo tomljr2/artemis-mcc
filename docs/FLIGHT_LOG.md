@@ -457,3 +457,15 @@ applies the earliest-learned merge first within each word, with a per-word cache
 2.02 chars/token, exact round trip. Longest tokens: " Houston", "COLUMBIA", " Apollo".
 89 tests pass.
 **Next:** Compare with GPT-2's tokenizer on aerospace terms.
+
+## 2026-10-07 · Phase 1 · Stage 3 · Step 4: Compare with GPT-2's tokenizer
+**Objective:** How does a tokenizer trained on NASA text cut aerospace terms?
+**What I did:** `pretrain/compare_tokenizers.py`: ours (vocab 2,048, training split only)
+vs GPT-2 (vocab 50,257, via tiktoken).
+**What I learned:** A tokenizer reflects its training text: ours gives "Grumman" one token
+(GPT-2: 3) despite a 25x smaller vocab. Both shred acronyms and formulas (S-IVB, LOX/LH2,
+N2O4: 4-6 tokens). Ours never saw "Δ" or "₂": the book cleaning dropped non-ASCII.
+**Measurements:** chars/token on held-out text: transcript 2.66 vs 3.44, book 3.07 vs 4.59
+(ours vs GPT-2). Training ours: 271 s.
+**Anomalies:** Revisit the non-ASCII stripping in Phase 2 now that BPE is byte-level.
+**Next:** Save/load the tokenizer and train the GPT on BPE tokens (vocab 1,024).

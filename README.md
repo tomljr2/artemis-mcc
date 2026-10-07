@@ -16,7 +16,7 @@ When the consoles disagree, Artemis says so instead of guessing.
 |---|---|
 | Stage 1: a GPT from an empty file | Done |
 | Stage 2: modern upgrades (RMSNorm, RoPE, batched heads, SwiGLU, no biases) | Done |
-| Stage 3: BPE tokenizer | Next |
+| Stage 3: BPE tokenizer | In work |
 | Stage 4: real training run, tag `artemis-i` | Not started |
 
 Step-by-step checklist: [pretrain/README.md](pretrain/README.md). Every step, with its
