@@ -14,6 +14,8 @@ import torch
 import torch.nn.functional as F
 from torch import nn
 
+from pretrain.rope import apply_rope, rope_angles
+
 
 def mask_future(scores: torch.Tensor) -> torch.Tensor:
     """Set every score above the diagonal (a later position) to -inf.
@@ -62,6 +64,11 @@ class AttentionHead(nn.Module):
         """(B, T, n_embd) -> (B, T, T): how much each position takes from each earlier one."""
         q = self.query(x)  # (B, T, head_size)
         k = self.key(x)  # (B, T, head_size)
+        # RoPE: turn each query and key by an angle set by its position, so the scores below
+        # depend on how far apart two positions are. Values are not rotated: position decides
+        # where to look, not what gets passed on.
+        cos, sin = rope_angles(x.shape[1], self.head_size, device=x.device)
+        q, k = apply_rope(q, cos, sin), apply_rope(k, cos, sin)
         # Score for (t, s) = dot product of position t's query with position s's key: large
         # when they point the same way. (B, T, hs) @ (B, hs, T) -> (B, T, T).
         scores = q @ k.transpose(-2, -1)

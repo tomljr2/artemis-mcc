@@ -84,3 +84,14 @@ def test_multi_head_cannot_see_the_future():
     changed[:, 3:] = torch.randn(1, 3, 16)
     with torch.no_grad():
         assert torch.allclose(mha(x)[:, :3], mha(changed)[:, :3])
+
+
+def test_head_tells_positions_apart_even_when_their_contents_are_identical():
+    # Without position information, identical inputs give identical scores, so softmax spreads
+    # the weight evenly. RoPE rotates each query and key by its position, so scores now
+    # depend on distance and the weights are no longer even.
+    torch.manual_seed(0)
+    head = AttentionHead(n_embd=16, head_size=8)
+    x = torch.randn(1, 1, 16).expand(1, 6, 16)  # the same vector at all 6 positions
+    last_row = head.attention_weights(x)[0, -1]
+    assert not torch.allclose(last_row, torch.full((6,), 1 / 6), atol=1e-3)

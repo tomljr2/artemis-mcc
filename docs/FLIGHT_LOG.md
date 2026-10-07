@@ -289,3 +289,17 @@ re-centering and the shift can go. Simpler, fewer parameters, same quality.
 within likely noise), 456 s vs 468 s. Val still falling at the end. 51 tests pass.
 **Anomalies:** Old LayerNorm checkpoints no longer load (they carry shift weights).
 **Next:** Step 25: RoPE.
+
+## 2026-10-07 · Phase 1 · Step 25: RoPE
+**Objective:** Second modern delta: rotary position embeddings instead of a position table.
+**What I did:** `pretrain/rope.py` (`rope_angles`, `apply_rope`); each head rotates its
+queries and keys by position before scoring. Learned position table removed.
+**What I learned:** Rotation makes a query·key score depend only on the distance between
+positions. Position decides where to look, not what gets passed on, so values stay
+unrotated. A run of identical tokens ([5, 5, 5]) can't be told apart any more; that old test
+was replaced by "word order changes the prediction".
+**Measurements:** 811,473 params (-8,192). Faster early (val 1.517 vs 1.692 at step 500) but
+best 1.272 vs 1.260. 768 s vs 456 s, likely from recomputing angles in all 16 heads. 57 tests.
+**Anomalies:** Val loss now wobbles ±0.01-0.02 between evals, so step 24's 0.007 "gain" and
+this 0.012 "loss" are both noise. Single-seed comparisons this small can't be called.
+**Next:** Step 26: batched heads (and compute the RoPE angles once).

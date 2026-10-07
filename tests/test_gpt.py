@@ -20,10 +20,16 @@ def test_loss_is_returned_when_targets_are_given():
     assert loss.ndim == 0  # a single number
 
 
-def test_same_token_at_different_positions_gets_different_predictions():
-    # Unlike the bigram model, position and context now matter.
-    logits, _ = make_model()(torch.tensor([[5, 5, 5]]))
-    assert not torch.allclose(logits[0, 0], logits[0, 2])
+def test_word_order_changes_the_prediction():
+    # The last position sees the same three tokens either way; only their order differs.
+    # A model with no sense of position would treat them as a bag and predict the same.
+    # (A run of identical tokens like [5, 5, 5] can't be told apart with RoPE: it encodes
+    # distance between different things, and averaging identical values gives that value.)
+    model = make_model()
+    with torch.no_grad():
+        a, _ = model(torch.tensor([[3, 7, 5]]))
+        b, _ = model(torch.tensor([[7, 3, 5]]))
+    assert not torch.allclose(a[0, -1], b[0, -1])
 
 
 def test_predictions_cannot_see_the_future():
@@ -35,7 +41,7 @@ def test_predictions_cannot_see_the_future():
 
 
 def test_generate_can_run_past_the_context_length():
-    # The position table has only block_size rows, so generate must crop its context.
+    # The model was trained on at most block_size positions, so generate crops its context.
     out = make_model().generate(torch.tensor([[1]]), max_new_tokens=20)
     assert out.shape == (1, 21)
 
@@ -54,7 +60,7 @@ def test_blocks_that_output_zero_pass_the_embeddings_straight_through():
                 layer.weight.zero_()
                 layer.bias.zero_()
         idx = torch.tensor([[1, 2, 3]])
-        embeddings = model.token_embedding(idx) + model.position_embedding(torch.arange(3))
+        embeddings = model.token_embedding(idx)
         logits, _ = model(idx)
         assert torch.allclose(logits, model.lm_head(model.ln_f(embeddings)), atol=1e-6)
 
@@ -94,3 +100,8 @@ def test_every_norm_in_the_model_is_rms_norm():
     norms = [m for m in make_model().modules() if isinstance(m, (LayerNorm, RMSNorm))]
     assert len(norms) == 2 * 3 + 1  # two per block, plus the final norm
     assert all(isinstance(m, RMSNorm) for m in norms)
+
+
+def test_there_is_no_learned_position_table():
+    # Position now comes from RoPE inside attention, not from a table added at the input.
+    assert not hasattr(make_model(), "position_embedding")

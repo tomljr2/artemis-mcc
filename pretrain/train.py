@@ -40,7 +40,8 @@ CONFIGS = {
         # size (best val loss): 0.0 -> 1.317 then rising to 1.424 (overfits), 0.1 -> 1.267,
         # 0.2 -> 1.277. On the earlier 57k-param model it only hurt (1.661 -> 1.724).
         "dropout": 0.1,
-        # Best val loss with these settings (seed 11): LayerNorm 1.267, RMSNorm 1.260.
+        # Best val loss with these settings (seed 11): LayerNorm 1.267, RMSNorm 1.260,
+        # + RoPE 1.272. Evals wobble by ~0.01-0.02, so these are all a tie.
     },
 }
 EVAL_INTERVAL = 500  # report losses every this many steps
