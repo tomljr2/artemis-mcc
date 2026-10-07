@@ -563,3 +563,14 @@ automatically better on our metric.
 **Anomalies:** Unexplained transcript regression. Hypotheses: less data, or the removed
 pages were useful practice for numbers (timestamps).
 **Next:** Score both models on transcript timestamps vs spoken words.
+
+## 2026-10-07 · Phase 1 · Stage 4 · Step 6: Diagnose the transcript regression
+**Objective:** Find where the cleaned-data model loses on the transcript.
+**What I did:** Scored both models on the transcript validation text, split into header
+lines (timestamp + speaker, 14% of characters) and spoken lines; compared how each
+tokenizer cuts a header line.
+**What I learned:** Spoken lines are unchanged (1.117 vs 1.118); header lines got much
+worse (1.275 -> 1.972). Removing number-heavy back matter left the tokenizer with only
+some two-digit numbers as tokens (67 -> 45 number tokens), so "29" became "2"+"9" while
+"03" stayed whole: inconsistent pieces for the same kind of field.
+**Next:** Split numbers into single digits (as Llama does), retrain, rerun this check.
