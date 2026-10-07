@@ -421,3 +421,15 @@ sliding down (transcript only). More data keeps all lines falling together, bend
 toward flat. The smaller transcript val set is visibly noisier.
 **Measurements:** 77 tests pass. Phase 1, Stages 1 and 2 complete.
 **Next:** Phase 1, Stage 3: BPE tokenizer, starting with a toy example.
+
+## 2026-10-07 · Phase 1 · Stage 3 · Step 1: BPE basics
+**Objective:** Learn a vocabulary of chunks instead of single characters.
+**What I did:** `pretrain/bpe.py`: `pair_counts`, `merge`, `train_bpe` (starts from UTF-8
+bytes, ids 0-255; each merge adds one token).
+**What I learned:** Counting neighbour pairs alone discovers words and structure:
+"Houston" became one token, " you " by merge 250, speaker labels like " CC\n".
+**Measurements:** First 50,000 transcript characters, 300 merges: 2.52 characters per
+token, ~6 s. 82 tests pass.
+**Anomalies:** Tokens cross word and punctuation boundaries (". Th", " CMP\nRoger"), and
+rescanning the whole text for every merge is too slow for the full data.
+**Next:** Split text into words before merging (pre-tokenizer).
