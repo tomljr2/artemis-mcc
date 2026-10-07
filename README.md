@@ -8,7 +8,19 @@ material, and its runtime is modeled on Mission Control: specialist consoles eac
 an answer, and a Flight Director runs a **go/no-go poll** before anything is released.
 When the consoles disagree, Artemis says so instead of guessing.
 
-> Status: **Pre-launch.** Phase 1 (Artemis I) is in work. See [docs/PLAN.md](docs/PLAN.md).
+> Status: **Pre-launch.** Building Artemis I (Phase 1). No release yet.
+
+## Mission status
+
+| Phase 1 stage | State |
+|---|---|
+| Stage 1: a GPT from an empty file | Done, except one sanity check (overfit one batch) |
+| Stage 2: modern upgrades (RMSNorm, RoPE, batched heads, SwiGLU, no biases) | In work |
+| Stage 3: BPE tokenizer | Next |
+| Stage 4: real training run, tag `artemis-i` | Not started |
+
+Step-by-step checklist: [pretrain/README.md](pretrain/README.md). Every step, with its
+measurements: [docs/FLIGHT_LOG.md](docs/FLIGHT_LOG.md). Full plan: [docs/PLAN.md](docs/PLAN.md).
 
 ## Mission control architecture
 

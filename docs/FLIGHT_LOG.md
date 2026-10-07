@@ -327,3 +327,12 @@ Final train loss 0.851 vs 0.905. 332 s. 62 tests pass.
 **Anomalies:** I flagged the data limit in step 19 but did not raise it until asked.
 Checklists in PLAN.md and pretrain/README.md were never ticked.
 **Next:** Update README status and checklists, then add more Apollo transcripts.
+
+## 2026-10-07 · Phase 1 · Housekeeping: status and checklists
+**Objective:** Make the README and checklists match reality.
+**What I did:** README "Mission status" table; ticked done items in `pretrain/README.md`;
+open items listed honestly (overfit one batch, remove biases, loss curves).
+**What I learned:** Releases (Artemis I, II…), phases (1–6) and stages (1–4, inside
+Phase 1) are three different numbering schemes. Always say "Phase 1, Stage 3", never
+"Stage 3" alone. No milestone tags: tags are only for real releases.
+**Next:** Add more Apollo transcripts to the training data.

@@ -15,24 +15,27 @@ reviewed, and committed with a Flight Log entry before the next one starts.
 ## Countdown: Phase 1 steps
 
 **T-minus: environment**
-- [ ] Install PyTorch with CUDA into `.venv` and confirm `torch.cuda.is_available()`.
-- [ ] Note the measured matmul throughput of the 1080 in the Flight Log (you will use it to
+- [x] Install PyTorch with CUDA into `.venv` and confirm `torch.cuda.is_available()`.
+- [x] Note the measured matmul throughput of the 1080 in the Flight Log (you will use it to
       estimate run times).
 
 **Stage 1: from the lecture (Zero to Hero)**
-- [ ] `bigram.py`: character-level bigram model on a small text (a NASA transcript works
+- [x] `bigram.py`: character-level bigram model on a small text (a NASA transcript works
       well instead of Shakespeare). Understand logits, cross-entropy, and why initial loss
       ≈ ln(vocab_size).
-- [ ] Single-head self-attention, then multi-head, then a full block (attention + MLP +
+- [x] Single-head self-attention, then multi-head, then a full block (attention + MLP +
       residuals + LayerNorm).
-- [ ] `model.py`: a GPT-2 style model. Check that it can **overfit one batch** to near-zero
-      loss before training on anything real.
+- [x] `gpt.py`: a GPT-2 style model, scaled up, with dropout, checkpoints, and sampling.
+- [ ] Check that it can **overfit one batch** to near-zero loss (skipped so far).
 
 **Stage 2: modern deltas**
-- [ ] Swap LayerNorm → RMSNorm. Remove biases.
-- [ ] Swap learned positional embeddings → RoPE.
-- [ ] Swap GELU MLP → SwiGLU.
-- [ ] Each swap: one commit, one before/after loss curve at the same step count.
+- [x] Swap LayerNorm → RMSNorm.
+- [ ] Remove biases.
+- [x] Swap learned positional embeddings → RoPE.
+- [x] Compute all attention heads in one batch instead of a loop.
+- [x] Swap the MLP → SwiGLU (ours was ReLU, not GELU).
+- [ ] Each swap: one commit, one before/after loss curve at the same step count. (One
+      commit each, with before/after numbers in the Flight Log; curves not yet plotted.)
 
 **Stage 3: tokenizer**
 - [ ] `tokenizer.py`: byte-level BPE trained on FineWeb-Edu + NASA text.
