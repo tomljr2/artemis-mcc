@@ -513,3 +513,15 @@ the data again, not the optimizer.
 1.279 constant (a tie). Final train 0.884 vs 0.900. Chart: `docs/curves/lr_schedule.png`.
 95 tests pass.
 **Next:** Gradient clipping.
+
+## 2026-10-07 · Phase 1 · Stage 4 · Step 2: Gradient clipping
+**Objective:** Cap the size of any single update.
+**What I did:** Hand-written `clip_gradients` (global norm; scales all gradients by the same
+factor if above the limit), matched against `nn.utils.clip_grad_norm_`; `train_step` takes
+`max_grad_norm`, set to 1.0 in the config. Four tests.
+**What I learned:** Clipping caps a step's length without changing its direction. Our
+small model never needs it: norms stay well under 1.0. It is insurance for larger runs.
+**Measurements:** Grad norm over the first 3,000 steps: median 0.31 -> 0.55, max 0.61,
+0% of steps above 1.0. Full 40,000-step rerun skipped (it would reproduce the last one).
+99 tests pass.
+**Next:** Clean the remaining PDF noise in the books.

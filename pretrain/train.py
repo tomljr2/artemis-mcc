@@ -40,6 +40,7 @@ CONFIGS = {
         "learning_rate": 1e-3,  # peak step size; attention is less forgiving than a table
         "min_learning_rate": 1e-4,  # the schedule decays to a tenth of the peak
         "warmup_steps": 1000,  # ramp up over the first 2.5% of training
+        "max_grad_norm": 1.0,  # gradient clipping limit (the usual GPT-2 / Llama value)
         "max_steps": 40000,  # 10,000 left every loss still falling on transcript + books
         "n_embd": 128,  # channels per position
         "n_head": 4,  # attention heads, each n_embd // n_head = 32 channels wide
@@ -61,13 +62,37 @@ EVAL_INTERVAL = 500  # report losses every this many steps
 EVAL_BATCHES = 100  # batches averaged per loss report
 
 
+@torch.no_grad()
+def clip_gradients(model: nn.Module, max_norm: float) -> float:
+    """If the gradients' overall size is above max_norm, shrink them all to that size.
+
+    The size (norm) treats every gradient number of every parameter as one long list:
+    square root of the sum of squares. Shrinking multiplies every number by the same factor,
+    so the direction of the step is unchanged, only its length is capped. Returns the size
+    before clipping.
+    """
+    grads = [p.grad for p in model.parameters() if p.grad is not None]
+    norm = torch.sqrt(sum((g**2).sum() for g in grads))
+    scale = max_norm / (norm + 1e-6)  # the tiny 1e-6 avoids dividing by zero
+    if scale < 1:
+        for g in grads:
+            g.mul_(scale)
+    return norm.item()
+
+
 def train_step(
-    model: nn.Module, optimizer: torch.optim.Optimizer, x: torch.Tensor, y: torch.Tensor
+    model: nn.Module,
+    optimizer: torch.optim.Optimizer,
+    x: torch.Tensor,
+    y: torch.Tensor,
+    max_grad_norm: float | None = None,
 ) -> float:
     """One update: forward pass, backpropagation, parameter nudge. Returns the loss."""
     _, loss = model(x, y)  # 1. forward: how wrong are the predictions?
     optimizer.zero_grad()  # 2. clear gradients left over from the previous step
     loss.backward()  # 3. backprop: d(loss)/d(parameter) for every parameter
+    if max_grad_norm is not None:
+        clip_gradients(model, max_grad_norm)  # cap the step's size, keep its direction
     optimizer.step()  # 4. move each parameter a little in the loss-lowering direction
     return loss.item()
 
@@ -188,7 +213,7 @@ def main(model_name: str) -> None:
             for group in optimizer.param_groups:  # AdamW reads its step size from here
                 group["lr"] = lr
             x, y = get_batch(train_data, block_size, batch_size, device)
-            train_step(model, optimizer, x, y)
+            train_step(model, optimizer, x, y, cfg.get("max_grad_norm"))
 
     # Let it write: start from a newline and sample 500 tokens. eval() switches dropout
     # off; it is only for training.

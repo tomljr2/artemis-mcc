@@ -1,10 +1,17 @@
 import math
 
 import torch
+from torch import nn
 
 from pretrain.bigram import BigramModel
 from pretrain.gpt import GPT
-from pretrain.train import estimate_loss, learning_rate, loss_per_char, train_step
+from pretrain.train import (
+    clip_gradients,
+    estimate_loss,
+    learning_rate,
+    loss_per_char,
+    train_step,
+)
 
 
 def test_train_step_lowers_the_loss_on_a_repeated_batch():
@@ -70,3 +77,50 @@ def test_decay_follows_a_cosine_down_to_the_minimum():
 def test_learning_rate_never_leaves_the_range():
     rates = [learning_rate(step, **SCHEDULE) for step in range(1101)]
     assert all(1e-5 - 1e-12 <= lr <= 1e-3 + 1e-12 for lr in rates)
+
+
+def make_grads(scale: float) -> nn.Module:
+    """A small layer whose gradients are filled in by hand, then multiplied by scale."""
+    torch.manual_seed(0)
+    layer = nn.Linear(4, 3)
+    for p in layer.parameters():
+        p.grad = torch.randn_like(p) * scale
+    return layer
+
+
+def grads(layer: nn.Module) -> torch.Tensor:
+    return torch.cat([p.grad.flatten() for p in layer.parameters()])
+
+
+def test_small_gradients_are_left_alone():
+    layer = make_grads(scale=0.01)
+    before = grads(layer).clone()
+    clip_gradients(layer, max_norm=1.0)
+    assert torch.equal(grads(layer), before)
+
+
+def test_big_gradients_shrink_to_the_limit_but_keep_their_direction():
+    layer = make_grads(scale=100.0)
+    before = grads(layer).clone()
+    norm = clip_gradients(layer, max_norm=1.0)
+    assert math.isclose(norm, before.norm().item(), rel_tol=1e-5)  # reports the size before
+    assert math.isclose(grads(layer).norm().item(), 1.0, rel_tol=1e-5)  # now exactly the limit
+    assert torch.allclose(grads(layer) / grads(layer).norm(), before / before.norm())
+
+
+def test_matches_pytorchs_built_in_clipping():
+    ours, theirs = make_grads(scale=100.0), make_grads(scale=100.0)
+    clip_gradients(ours, max_norm=1.0)
+    nn.utils.clip_grad_norm_(theirs.parameters(), max_norm=1.0)
+    assert torch.allclose(grads(ours), grads(theirs))
+
+
+def test_train_step_clips_the_gradients_it_steps_with():
+    torch.manual_seed(0)
+    model = GPT(vocab_size=20, block_size=16, n_embd=32, n_head=4, n_layer=2)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3)
+    x, y = torch.randint(20, (4, 16)), torch.randint(20, (4, 16))
+    train_step(model, optimizer, x, y, max_grad_norm=0.01)
+    # The gradients used by the step are still attached to the parameters afterwards.
+    norm = torch.sqrt(sum((p.grad**2).sum() for p in model.parameters()))
+    assert norm <= 0.01 + 1e-6
