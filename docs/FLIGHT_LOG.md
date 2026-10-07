@@ -433,3 +433,16 @@ token, ~6 s. 82 tests pass.
 **Anomalies:** Tokens cross word and punctuation boundaries (". Th", " CMP\nRoger"), and
 rescanning the whole text for every merge is too slow for the full data.
 **Next:** Split text into words before merging (pre-tokenizer).
+
+## 2026-10-07 · Phase 1 · Stage 3 · Step 2: Pre-tokenizer
+**Objective:** Keep merges inside words, and make training fast enough for real data.
+**What I did:** `split_words` (GPT-2-style rule with the built-in `re`: contractions,
+letters, digits, punctuation, whitespace); `train_bpe` merges inside pieces only and
+counts each distinct word once, weighted by frequency.
+**What I learned:** Tokens became real word pieces (" the", " Houston", " Apollo") instead
+of junk like ".\n\n00 0". Compression dips slightly (2.52 -> 2.20 chars/token on 50k chars)
+because the junk merges were common.
+**Measurements:** Full transcript: 234,470 word pieces, 7,850 distinct; 300 merges in
+11.7 s. 86 tests pass.
+**Anomalies:** Encoding text by trying every merge on every word occurrence is slow.
+**Next:** BPETokenizer with encode/decode.

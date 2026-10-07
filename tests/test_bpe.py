@@ -1,4 +1,4 @@
-from pretrain.bpe import merge, pair_counts, train_bpe
+from pretrain.bpe import merge, pair_counts, split_words, train_bpe
 
 
 def test_pair_counts_counts_each_pair_of_neighbours():
@@ -22,3 +22,30 @@ def test_training_merges_the_most_common_pair_first():
 def test_later_merges_build_on_earlier_ones():
     # First "a"+"b" -> 256 ("ab"), then 256+256 -> 257 ("abab").
     assert train_bpe("abababab", num_merges=2) == {(97, 98): 256, (256, 256): 257}
+
+
+def test_split_words_keeps_letters_together_and_splits_off_punctuation():
+    assert split_words("Houston, Tranquility Base here.") == [
+        "Houston",
+        ",",
+        " Tranquility",
+        " Base",
+        " here",
+        ".",
+    ]
+
+
+def test_split_words_keeps_numbers_together_and_splits_off_contractions():
+    assert split_words("04 13 we're") == ["04", " 13", " we", "'re"]
+
+
+def test_split_words_loses_nothing():
+    # Joining the pieces must give back the exact text, newlines, underscores and all.
+    text = "05 04 16 17 CC\nEagle, Houston.  You're GO_for 1202!\n\n  ok"
+    assert "".join(split_words(text)) == text
+
+
+def test_merges_never_cross_a_word_boundary():
+    # Across the whole text, "a" + "." is the most common pair (3 times). But "a" and "."
+    # are in different words, so the first merge must be " " + "a" (2 times) instead.
+    assert train_bpe("a. a. a.", num_merges=1) == {(32, 97): 256}
