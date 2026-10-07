@@ -6,9 +6,11 @@ every occurrence into one new token (256, 257, ...). Later merges build on earli
 so common pieces grow into whole words: "o"+"u" -> "ou", "H"+"ou" -> "Hou", ...
 """
 
+import json
 import re
 from collections import Counter
 from itertools import pairwise
+from pathlib import Path
 
 # The pre-tokenizer: cut text into word-like pieces before any merging, so merges stay
 # inside a piece. Like GPT-2's rule: contractions ('s, 're, ...), letters with an optional
@@ -76,6 +78,17 @@ class BPETokenizer:
     @classmethod
     def train(cls, text: str, vocab_size: int) -> "BPETokenizer":
         return cls(train_bpe(text, num_merges=vocab_size - 256))
+
+    def save(self, path: Path) -> None:
+        """The merges are the whole tokenizer: save them as a list, in the order learned."""
+        path.parent.mkdir(parents=True, exist_ok=True)
+        merges = [[a, b, new_id] for (a, b), new_id in self.merges.items()]
+        path.write_text(json.dumps({"merges": merges}), encoding="utf-8")
+
+    @classmethod
+    def load(cls, path: Path) -> "BPETokenizer":
+        merges = json.loads(path.read_text(encoding="utf-8"))["merges"]
+        return cls({(a, b): new_id for a, b, new_id in merges})
 
     def encode_word(self, word: str) -> list[int]:
         if word not in self._cache:

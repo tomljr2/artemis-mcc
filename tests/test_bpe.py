@@ -69,3 +69,14 @@ def test_merges_compress_the_text_they_were_trained_on():
     text = "Houston, Tranquility Base here. " * 20
     tok = BPETokenizer.train(text, vocab_size=300)
     assert len(tok.encode(text)) < len(text.encode("utf-8")) / 3
+
+
+def test_a_saved_tokenizer_loads_back_identical(tmp_path):
+    tok = BPETokenizer.train("Houston, Tranquility Base here. " * 20, vocab_size=300)
+    path = tmp_path / "tokenizer.json"
+    tok.save(path)
+    loaded = BPETokenizer.load(path)
+    assert loaded.merges == tok.merges
+    assert list(loaded.merges) == list(tok.merges)  # same order: merges apply in order
+    text = "Tranquility Base, Houston."
+    assert loaded.encode(text) == tok.encode(text)

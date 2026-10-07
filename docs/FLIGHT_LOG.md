@@ -469,3 +469,14 @@ N2O4: 4-6 tokens). Ours never saw "Δ" or "₂": the book cleaning dropped non-A
 (ours vs GPT-2). Training ours: 271 s.
 **Anomalies:** Revisit the non-ASCII stripping in Phase 2 now that BPE is byte-level.
 **Next:** Save/load the tokenizer and train the GPT on BPE tokens (vocab 1,024).
+
+## 2026-10-07 · Phase 1 · Stage 3 · Step 5: Save and load the tokenizer
+**Objective:** Train the tokenizer once; reuse it in every run.
+**What I did:** `BPETokenizer.save/load` (the ordered merge list as JSON);
+`pretrain/train_tokenizer.py` trains a 1,024-token vocab on the training split only.
+**What I learned:** A BPE tokenizer is fully described by its ordered merges. A bigger
+vocab costs model parameters (input table + output layer), and per-token losses are not
+comparable to per-character ones.
+**Measurements:** 141 s to train; 4.79M chars -> 1.91M tokens (2.51 chars/token);
+13 KB file. 90 tests pass.
+**Next:** Train the GPT on BPE tokens; report loss per character too.
