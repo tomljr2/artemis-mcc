@@ -525,3 +525,14 @@ small model never needs it: norms stay well under 1.0. It is insurance for large
 0% of steps above 1.0. Full 40,000-step rerun skipped (it would reproduce the last one).
 99 tests pass.
 **Next:** Clean the remaining PDF noise in the books.
+
+## 2026-10-07 · Phase 1 · Stage 4 · Step 3: Clean book back matter, stamps, footnotes
+**Objective:** Remove the non-prose the model was imitating.
+**What I did:** `is_back_matter` (labels such as NOTES TO PAGES / SOURCE NOTES / INDEX,
+>12% digits, or 8+ numbered entries), `remove_scan_stamps`, `remove_footnote_markers`.
+Rules were checked against what they dropped and pages near each threshold.
+**What I learned:** About a quarter of the book text was never prose: endnotes, indexes,
+tables. Some prose appendices are lost as a side effect.
+**Measurements:** Books 4.60M -> 3.54M chars; stamps 31 -> 0, glued footnotes 658 -> 0,
+notes pages ~108 -> 0. 107 tests pass. Model not retrained yet.
+**Next:** Running headers and page numbers, then retrain tokenizer and model.

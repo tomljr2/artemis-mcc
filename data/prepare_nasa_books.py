@@ -64,6 +64,36 @@ def clean_page(text: str) -> str:
     return "".join(ch for ch in text if " " <= ch <= "~").strip()
 
 
+BACK_MATTER_LABELS = ("NOTES TO PAGES", "SOURCE NOTES", "BIBLIOGRAPHY", "INDEX", "APPENDIX")
+# A numbered list entry: "23. Mueller to ...". Eight or more on a page means endnotes, a
+# contents page, or chart labels; prose pages with a short numbered list have fewer.
+NUMBERED_ENTRY = re.compile(r"(?:^|\s)\d{1,3}\. [A-Z\"]")
+STAMP = re.compile(
+    r"ORIGINAL PAGE\s*\d*\s*(?:IS OF POOR QUALITY|BLACK AND WHITE PHOTOGRAPH|COLOR PHOTOGRAPH)?"
+)
+# A footnote number glued to the end of a word's punctuation: "director.65 " -> "director. "
+# (Fixed-width lookbehind: a lowercase letter, then the punctuation mark.)
+FOOTNOTE = re.compile(r"(?<=[a-z][.,;:!?'\")])\d{1,3}(?=\s|$)")
+
+
+def is_back_matter(page: str) -> bool:
+    """Notes, bibliography, index, appendix tables: lists of names and numbers, not prose."""
+    if any(label in page[:40].upper() for label in BACK_MATTER_LABELS):
+        return True
+    if len(NUMBERED_ENTRY.findall(page)) >= 8:
+        return True
+    return sum(ch.isdigit() for ch in page) / max(len(page), 1) > 0.12  # indexes, tables
+
+
+def remove_scan_stamps(text: str) -> str:
+    """Drop the 'ORIGINAL PAGE ...' stamps NASA's scanning added to photo pages."""
+    return STAMP.sub("", text)
+
+
+def remove_footnote_markers(text: str) -> str:
+    return FOOTNOTE.sub("", text)
+
+
 def included_urls() -> set[str]:
     with LICENSE_LOG.open(encoding="utf-8", newline="") as f:
         return {row["url"] for row in csv.DictReader(f) if row["decision"] == "include"}
@@ -92,7 +122,12 @@ def main() -> None:
         pdf_path = RAW_DIR / f"{book_id}.pdf"
         download(url, pdf_path)
         pages = [page.extract_text() or "" for page in PdfReader(pdf_path).pages]
-        kept = [clean_page(p) for p in pages if is_prose(p)]
+        prose = [clean_page(p) for p in pages if is_prose(p)]
+        kept = [
+            " ".join(remove_footnote_markers(remove_scan_stamps(p)).split())  # tidy spaces
+            for p in prose
+            if not is_back_matter(p)
+        ]
         text = "\n\n".join(kept) + "\n"
         (TEXT_DIR / f"{book_id}.txt").write_text(text, encoding="utf-8", newline="\n")
         print(f"{book_id}: kept {len(kept)} of {len(pages)} pages, {len(text):,} characters")
