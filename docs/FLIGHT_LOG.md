@@ -349,3 +349,19 @@ independent, copyrighted site. Our Apollo 11 file came from a nasa.gov copy of t
 but it is NASA's document word for word.
 **Measurements:** 65 tests pass.
 **Next:** Choose NASA history books as additional training text.
+
+## 2026-10-07 · Phase 1 · Step: NASA history books
+**Objective:** More training text with a clear license.
+**What I did:** `data/prepare_nasa_books.py` downloads four NASA History Series books from
+NTRS, keeps pages that read as prose, and cleans PDF text (split words, ligatures, curly
+quotes, non-ASCII). License log: SP-350, SP-4204, SP-4205, SP-4214 include ("Public Use
+Permitted"); SP-4206 *Stages to Saturn* exclude ("Use by or on behalf of the US Gov.
+Permitted", university author). The script refuses any book without an include row.
+**What I learned:** NTRS states each document's usage terms, which makes license decisions
+much clearer than for mirror sites. Parameters (learned numbers) and training data
+(tokens read) are separate quantities; Chinchilla suggests ~20 tokens per parameter.
+**Measurements:** 1,657 of 1,964 pages kept; 4.6M characters (5.6x the Apollo 11
+transcript). 71 tests pass.
+**Anomalies:** Remaining noise: page headers ("160 APOLLO"), junk from partly-photo pages,
+footnote numbers ("director.65"), occasional missing spaces. Not yet measured.
+**Next:** Train on transcript + books, with validation split by document.
