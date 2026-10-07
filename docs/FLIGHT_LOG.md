@@ -549,3 +549,17 @@ pages starting/ending with a page number -> 0. Books 3.54M -> 3.52M chars. 111 t
 **Anomalies:** Left for Phase 2: unnumbered page-bottom footnotes, words split across
 pages, photo-caption junk, partial chapter titles.
 **Next:** Retrain the tokenizer and model on the cleaned text.
+
+## 2026-10-07 · Phase 1 · Stage 4 · Step 5: Retrain on the cleaned books
+**Objective:** See what the cleaning does to the model.
+**What I did:** Retrained the tokenizer (vocab 1,024) and the model (40,000 steps) on the
+cleaned text. Kept the noisy tokenizer and model for comparison.
+**What I learned:** The clean tokenizer swapped citation words (" interview", " Report",
+" 1966") for everyday English (" should", " might", " these"). But cleaner is not
+automatically better on our metric.
+**Measurements:** Train tokens 1.91M -> 1.43M; 2.61 chars/token (was 2.51). Best (step
+23,000): val transcript 1.252 (noisy: 1.174, same text, worse by 0.08), val book 1.277
+(noisy: 1.276, but the book text changed). Train/val gap 0.40 vs 0.29.
+**Anomalies:** Unexplained transcript regression. Hypotheses: less data, or the removed
+pages were useful practice for numbers (timestamps).
+**Next:** Score both models on transcript timestamps vs spoken words.
