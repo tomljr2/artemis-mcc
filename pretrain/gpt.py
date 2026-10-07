@@ -33,7 +33,7 @@ class GPT(nn.Module):
         self.blocks = nn.ModuleList(Block(n_embd, n_head, dropout) for _ in range(n_layer))
         self.ln_f = RMSNorm(n_embd)  # final norm, before the output layer
         # Turns each position's n_embd numbers into one score per vocabulary entry.
-        self.lm_head = nn.Linear(n_embd, vocab_size)
+        self.lm_head = nn.Linear(n_embd, vocab_size, bias=False)
 
     def forward(
         self, idx: torch.Tensor, targets: torch.Tensor | None = None

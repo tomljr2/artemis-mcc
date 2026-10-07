@@ -389,3 +389,14 @@ to book style, since ~85% of its training text is books.
 **Measurements:** Best at step 36,000: val transcript 1.273, val book 1.350 (avg 1.311),
 train 1.119. 25 min.
 **Next:** Remove the remaining biases (finishes Phase 1, Stage 2).
+
+## 2026-10-07 · Phase 1 · Step: Remove the remaining biases (Stage 2 done)
+**Objective:** Last modern delta: no "+ b" offsets, as in Llama.
+**What I did:** `bias=False` on the attention output layer (batched and loop versions)
+and on `lm_head`. Test: the model has no bias parameters.
+**What I learned:** With norms re-centering the numbers, biases add little. Removing them
+is about simplicity, not quality. Phase 1, Stage 2 is complete: RMSNorm, RoPE, batched
+heads, SwiGLU, no biases.
+**Measurements:** 811,904 params (-609). Best (step 36,500): val transcript 1.270, val book
+1.347, vs 1.273 / 1.350 with biases: a tie. 24 min. 74 tests pass.
+**Next:** Overfit-one-batch sanity check.

@@ -98,7 +98,7 @@ class MultiHeadAttention(nn.Module):
         )
         # Mixes the heads' results together. Without it, each head's findings would stay in
         # its own separate slice of channels.
-        self.proj = nn.Linear(n_embd, n_embd)
+        self.proj = nn.Linear(n_embd, n_embd, bias=False)
         self.dropout = nn.Dropout(dropout)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -126,7 +126,7 @@ class CausalSelfAttention(nn.Module):
         self.query = nn.Linear(n_embd, n_embd, bias=False)
         self.key = nn.Linear(n_embd, n_embd, bias=False)
         self.value = nn.Linear(n_embd, n_embd, bias=False)
-        self.proj = nn.Linear(n_embd, n_embd)
+        self.proj = nn.Linear(n_embd, n_embd, bias=False)
         self.attn_dropout = nn.Dropout(dropout)
         self.dropout = nn.Dropout(dropout)
 

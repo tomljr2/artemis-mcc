@@ -30,7 +30,7 @@ reviewed, and committed with a Flight Log entry before the next one starts.
 
 **Stage 2: modern deltas**
 - [x] Swap LayerNorm → RMSNorm.
-- [ ] Remove biases.
+- [x] Remove biases.
 - [x] Swap learned positional embeddings → RoPE.
 - [x] Compute all attention heads in one batch instead of a loop.
 - [x] Swap the MLP → SwiGLU (ours was ReLU, not GELU).

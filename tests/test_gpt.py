@@ -105,3 +105,9 @@ def test_every_norm_in_the_model_is_rms_norm():
 def test_there_is_no_learned_position_table():
     # Position now comes from RoPE inside attention, not from a table added at the input.
     assert not hasattr(make_model(), "position_embedding")
+
+
+def test_the_model_has_no_bias_parameters():
+    # Like Llama: every layer is a pure "multiply by weights", with no "+ b" offset.
+    names = [name for name, _ in make_model().named_parameters()]
+    assert not [name for name in names if name.endswith("bias")]
