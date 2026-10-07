@@ -18,12 +18,14 @@ def test_train_step_lowers_the_loss_on_a_repeated_batch():
     assert last < first
 
 
-def test_estimate_loss_reports_both_splits():
-    # An all-zero table guesses uniformly, so both splits score exactly ln(vocab_size).
+def test_estimate_loss_reports_every_named_split():
+    # An all-zero table guesses uniformly, so every split scores exactly ln(vocab_size).
     model = BigramModel(vocab_size=10)
     with torch.no_grad():
         model.table.weight.zero_()
     data = torch.randint(10, (200,))
-    losses = estimate_loss(model, data, data, block_size=8, batch_size=4, eval_batches=3)
-    assert math.isclose(losses["train"], math.log(10), rel_tol=1e-6)
-    assert math.isclose(losses["val"], math.log(10), rel_tol=1e-6)
+    splits = {"train": data, "val transcript": data, "val book": data}
+    losses = estimate_loss(model, splits, block_size=8, batch_size=4, eval_batches=3)
+    assert set(losses) == set(splits)
+    for loss in losses.values():
+        assert math.isclose(loss, math.log(10), rel_tol=1e-6)

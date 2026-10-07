@@ -14,11 +14,13 @@ from torch import nn
 from pretrain.bigram import BigramModel
 from pretrain.char_tokenizer import CharTokenizer
 from pretrain.checkpoint import save_checkpoint
-from pretrain.dataset import get_batch, train_val_split
+from pretrain.dataset import get_batch, make_splits
 from pretrain.gpt import GPT
 
 TEXT_PATH = Path("data/processed/apollo11_tec.txt")
-CHECKPOINT_PATH = Path("checkpoints/gpt_apollo11.pt")  # git-ignored
+BOOKS_DIR = Path("data/processed/nasa_books")  # made by: python -m data.prepare_nasa_books
+VAL_BOOKS = {"sp-350"}  # Apollo Expeditions to the Moon: held out whole, never trained on
+CHECKPOINT_PATH = Path("checkpoints/gpt_nasa.pt")  # git-ignored
 
 # Hyperparameters: settings we choose, as opposed to parameters the model learns.
 CONFIGS = {
@@ -40,9 +42,11 @@ CONFIGS = {
         # size (best val loss): 0.0 -> 1.317 then rising to 1.424 (overfits), 0.1 -> 1.267,
         # 0.2 -> 1.277. On the earlier 57k-param model it only hurt (1.661 -> 1.724).
         "dropout": 0.1,
-        # Best val loss with these settings (seed 11): LayerNorm 1.267, RMSNorm 1.260,
+        # Transcript-only training, best val (seed 11): LayerNorm 1.267, RMSNorm 1.260,
         # + RoPE 1.272, + batched heads 1.270, + SwiGLU 1.268. Evals wobble by ~0.01-0.02,
-        # so these are all a tie: the limit is now the data, not the model.
+        # so these are all a tie: the limit was the data, not the model.
+        # Transcript + books, 10,000 steps: val transcript 1.333, val book 1.413, all
+        # still falling: the limit is now training time.
     },
 }
 EVAL_INTERVAL = 500  # report losses every this many steps
@@ -63,17 +67,16 @@ def train_step(
 @torch.no_grad()  # evaluation only: skip the bookkeeping that backprop would need
 def estimate_loss(
     model: nn.Module,
-    train_data: torch.Tensor,
-    val_data: torch.Tensor,
+    splits: dict[str, torch.Tensor],
     block_size: int,
     batch_size: int,
     eval_batches: int,
     device: str = "cpu",
 ) -> dict[str, float]:
-    """Average loss over several batches of each split. One batch alone is too noisy."""
+    """Average loss over several batches of each named split. One batch alone is too noisy."""
     model.eval()
     losses = {}
-    for split, data in (("train", train_data), ("val", val_data)):
+    for split, data in splits.items():
         total = 0.0
         for _ in range(eval_batches):
             x, y = get_batch(data, block_size, batch_size, device)
@@ -88,9 +91,18 @@ def main(model_name: str) -> None:
     torch.manual_seed(11)
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
-    text = TEXT_PATH.read_text(encoding="utf-8")
-    tok = CharTokenizer(text)
-    train_data, val_data = train_val_split(torch.tensor(tok.encode(text), dtype=torch.long))
+    transcript = TEXT_PATH.read_text(encoding="utf-8")
+    books = {p.stem: p.read_text(encoding="utf-8") for p in sorted(BOOKS_DIR.glob("*.txt"))}
+    train_text, val_texts = make_splits(transcript, books, VAL_BOOKS)
+    # The vocabulary must cover every character the model will be asked about, val included.
+    tok = CharTokenizer(train_text + "".join(val_texts.values()))
+    splits = {
+        name: torch.tensor(tok.encode(text), dtype=torch.long)
+        for name, text in {"train": train_text, **val_texts}.items()
+    }
+    for name, data in splits.items():
+        print(f"{name}: {len(data):,} characters")
+    train_data = splits["train"]
 
     if model_name == "bigram":
         model = BigramModel(tok.vocab_size)
@@ -114,12 +126,13 @@ def main(model_name: str) -> None:
     best_val_loss = float("inf")
     for step in range(cfg["max_steps"] + 1):
         if step % EVAL_INTERVAL == 0:
-            losses = estimate_loss(
-                model, train_data, val_data, block_size, batch_size, EVAL_BATCHES, device
-            )
+            losses = estimate_loss(model, splits, block_size, batch_size, EVAL_BATCHES, device)
+            # One number to pick the best model by: the average of the two validation sets.
+            losses["val"] = (losses["val transcript"] + losses["val book"]) / 2
             print(
-                f"step {step:5d} | train loss {losses['train']:.3f}"
-                f" | val loss {losses['val']:.3f}"
+                f"step {step:5d} | train {losses['train']:.3f}"
+                f" | val transcript {losses['val transcript']:.3f}"
+                f" | val book {losses['val book']:.3f}"
                 f" | {time.perf_counter() - start_time:5.0f}s"
             )
             # Keep the best model seen so far, not just the last one: if training starts to

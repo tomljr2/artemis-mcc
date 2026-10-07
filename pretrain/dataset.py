@@ -32,3 +32,22 @@ def get_batch(
     x = torch.stack([data[i : i + block_size] for i in starts])
     y = torch.stack([data[i + 1 : i + block_size + 1] for i in starts])
     return x.to(device), y.to(device)
+
+
+def make_splits(
+    transcript: str, books: dict[str, str], val_books: set[str]
+) -> tuple[str, dict[str, str]]:
+    """Training text, plus named validation texts, split by document.
+
+    Whole books are held out, so no part of a validation book is ever trained on. The
+    transcript is split 90/10 by position as before, which keeps its validation set
+    identical to the one behind our earlier numbers.
+    """
+    transcript_train, transcript_val = train_val_split(transcript)
+    train_books = [text for name, text in sorted(books.items()) if name not in val_books]
+    train = "\n\n".join([transcript_train, *train_books])
+    val = {
+        "val transcript": transcript_val,
+        "val book": "\n\n".join(books[name] for name in sorted(val_books)),
+    }
+    return train, val

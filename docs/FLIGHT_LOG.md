@@ -365,3 +365,16 @@ transcript). 71 tests pass.
 **Anomalies:** Remaining noise: page headers ("160 APOLLO"), junk from partly-photo pages,
 footnote numbers ("director.65"), occasional missing spaces. Not yet measured.
 **Next:** Train on transcript + books, with validation split by document.
+
+## 2026-10-07 · Phase 1 · Step: Train on transcript + books
+**Objective:** See what 6x more text does.
+**What I did:** `make_splits` holds out one whole book (SP-350) plus the last 10% of the
+transcript (the old validation text). `estimate_loss` reports named splits. Checkpoint
+renamed `checkpoints/gpt_nasa.pt`.
+**What I learned:** In the same 10,000 steps, the model sees each character ~8.5 times
+instead of ~55, and mostly book prose. It stopped memorizing (train and val close
+together, all falling), so the limit moved from data to training time.
+**Measurements:** train 4.79M chars; val transcript 1.333 (was 1.268), val book 1.413,
+train 1.202. 374 s. 73 tests pass.
+**Anomalies:** I predicted the transcript score would improve; it got worse in this run.
+**Next:** Train longer (40,000 steps).

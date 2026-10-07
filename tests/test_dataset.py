@@ -1,6 +1,6 @@
 import torch
 
-from pretrain.dataset import get_batch, train_val_split
+from pretrain.dataset import get_batch, make_splits, train_val_split
 
 
 def test_split_sizes_follow_the_fraction():
@@ -34,3 +34,19 @@ def test_windows_stay_inside_the_data():
     x, y = get_batch(data, block_size=8, batch_size=3)
     assert torch.equal(x, data[:8].repeat(3, 1))
     assert torch.equal(y, data[1:].repeat(3, 1))
+
+
+def test_a_held_out_book_never_reaches_training():
+    train, val = make_splits("t" * 100, {"a": "AAAA", "b": "BBBB"}, val_books={"b"})
+    assert "B" not in train
+    assert "AAAA" in train
+    assert val["val book"] == "BBBB"
+
+
+def test_the_end_of_the_transcript_is_held_out_as_before():
+    # Same 90/10 split as before, so this validation set matches the one behind our old
+    # numbers.
+    train, val = make_splits("x" * 90 + "y" * 10, {"a": "AAAA", "b": "BBBB"}, val_books={"b"})
+    assert val["val transcript"] == "y" * 10
+    assert "y" not in train
+    assert "x" * 90 in train
