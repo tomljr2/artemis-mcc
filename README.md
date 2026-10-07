@@ -14,7 +14,7 @@ When the consoles disagree, Artemis says so instead of guessing.
 
 | Phase 1 stage | State |
 |---|---|
-| Stage 1: a GPT from an empty file | Done, except one sanity check (overfit one batch) |
+| Stage 1: a GPT from an empty file | Done |
 | Stage 2: modern upgrades (RMSNorm, RoPE, batched heads, SwiGLU, no biases) | Done |
 | Stage 3: BPE tokenizer | Next |
 | Stage 4: real training run, tag `artemis-i` | Not started |

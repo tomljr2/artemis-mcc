@@ -3,6 +3,7 @@ import math
 import torch
 
 from pretrain.bigram import BigramModel
+from pretrain.gpt import GPT
 from pretrain.train import estimate_loss, train_step
 
 
@@ -29,3 +30,18 @@ def test_estimate_loss_reports_every_named_split():
     assert set(losses) == set(splits)
     for loss in losses.values():
         assert math.isclose(loss, math.log(10), rel_tol=1e-6)
+
+
+def test_gpt_can_memorize_a_single_batch():
+    # The classic first check on a new model: trained over and over on one batch, it should
+    # drive the loss near zero. If it can't even memorize that, something is broken.
+    torch.manual_seed(0)
+    model = GPT(vocab_size=20, block_size=16, n_embd=32, n_head=4, n_layer=2)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=1e-2)
+    x = torch.randint(20, (4, 16))
+    y = torch.randint(20, (4, 16))  # random targets: nothing to learn except by memorizing
+    first = train_step(model, optimizer, x, y)
+    for _ in range(300):
+        last = train_step(model, optimizer, x, y)
+    assert first > 2.5  # starts near ln(20) = 3.0, i.e. guessing
+    assert last < 0.05

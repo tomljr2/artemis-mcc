@@ -26,7 +26,7 @@ reviewed, and committed with a Flight Log entry before the next one starts.
 - [x] Single-head self-attention, then multi-head, then a full block (attention + MLP +
       residuals + LayerNorm).
 - [x] `gpt.py`: a GPT-2 style model, scaled up, with dropout, checkpoints, and sampling.
-- [ ] Check that it can **overfit one batch** to near-zero loss (skipped so far).
+- [x] Check that it can **overfit one batch** to near-zero loss.
 
 **Stage 2: modern deltas**
 - [x] Swap LayerNorm → RMSNorm.

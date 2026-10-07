@@ -400,3 +400,14 @@ heads, SwiGLU, no biases.
 **Measurements:** 811,904 params (-609). Best (step 36,500): val transcript 1.270, val book
 1.347, vs 1.273 / 1.350 with biases: a tie. 24 min. 74 tests pass.
 **Next:** Overfit-one-batch sanity check.
+
+## 2026-10-07 · Phase 1 · Step: Overfit one batch
+**Objective:** Classic sanity check: can the model memorize one tiny batch?
+**What I did:** `test_gpt_can_memorize_a_single_batch` (small GPT, 300 steps). One-off demo:
+the same check with a bug (no `loss.backward()`), and at real size on one real batch.
+**What I learned:** A model that can't memorize one batch is broken, whatever the data.
+The bug leaves the loss perfectly flat. A real batch levels off just above 0, likely
+because the first positions of a window have too little context to tell targets apart.
+**Measurements:** Small: 3.195 -> 0.022 (bug: 3.195 -> 3.195). Real size: 4.734 -> 0.023
+by step 250. 75 tests pass.
+**Next:** Plot loss curves.
