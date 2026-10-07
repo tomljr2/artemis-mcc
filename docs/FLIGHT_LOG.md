@@ -378,3 +378,14 @@ together, all falling), so the limit moved from data to training time.
 train 1.202. 374 s. 73 tests pass.
 **Anomalies:** I predicted the transcript score would improve; it got worse in this run.
 **Next:** Train longer (40,000 steps).
+
+## 2026-10-07 · Phase 1 · Step: Train 4x longer
+**Objective:** Give the model time to learn from the larger text.
+**What I did:** `max_steps` 10,000 -> 40,000.
+**What I learned:** More practice helps, with diminishing returns: the first 10,000 steps
+took book val from 4.71 to 1.42, the next 30,000 only to 1.35. The train/val gap is
+starting to widen, so the 0.8M-param model is nearing its limit. The model now defaults
+to book style, since ~85% of its training text is books.
+**Measurements:** Best at step 36,000: val transcript 1.273, val book 1.350 (avg 1.311),
+train 1.119. 25 min.
+**Next:** Remove the remaining biases (finishes Phase 1, Stage 2).

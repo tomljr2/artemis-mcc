@@ -34,7 +34,7 @@ CONFIGS = {
         "block_size": 64,  # context length in characters
         "batch_size": 64,
         "learning_rate": 1e-3,  # attention is less forgiving of big steps than a table
-        "max_steps": 10000,
+        "max_steps": 40000,  # 10,000 left every loss still falling on transcript + books
         "n_embd": 128,  # channels per position
         "n_head": 4,  # attention heads, each n_embd // n_head = 32 channels wide
         "n_layer": 4,  # transformer blocks stacked
