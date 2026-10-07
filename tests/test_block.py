@@ -1,5 +1,6 @@
 import torch
 
+from pretrain.attention import CausalSelfAttention
 from pretrain.block import Block
 
 
@@ -26,3 +27,7 @@ def test_a_block_whose_layers_output_zero_is_the_identity():
             layer.bias.zero_()
         x = torch.randn(2, 5, 16)
         assert torch.allclose(block(x), x)
+
+
+def test_block_uses_the_batched_attention():
+    assert isinstance(Block(n_embd=16, n_head=4).attention, CausalSelfAttention)

@@ -303,3 +303,14 @@ best 1.272 vs 1.260. 768 s vs 456 s, likely from recomputing angles in all 16 he
 **Anomalies:** Val loss now wobbles ±0.01-0.02 between evals, so step 24's 0.007 "gain" and
 this 0.012 "loss" are both noise. Single-seed comparisons this small can't be called.
 **Next:** Step 26: batched heads (and compute the RoPE angles once).
+
+## 2026-10-07 · Phase 1 · Step 26: Batched attention heads
+**Objective:** Third modern delta: compute all heads at once instead of a loop.
+**What I did:** `CausalSelfAttention`: one query/key/value layer for all heads, heads as an
+extra tensor dimension, RoPE angles computed once per block. The loop version stays as the
+readable reference.
+**What I learned:** GPUs are fast at a few big jobs and slow at many small ones. A test that
+copies the loop's weights into the batched version proves it is the same maths.
+**Measurements:** 70.5 → 27.4 ms per training step; full run 768 → 343 s. Best val 1.270
+(was 1.272, same within noise). 60 tests pass.
+**Next:** Step 27: SwiGLU.

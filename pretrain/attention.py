@@ -105,3 +105,49 @@ class MultiHeadAttention(nn.Module):
         # Each head returns (B, T, head_size); concatenating along channels gives (B, T, n_embd).
         out = torch.cat([head(x) for head in self.heads], dim=-1)
         return self.dropout(self.proj(out))
+
+
+class CausalSelfAttention(nn.Module):
+    """MultiHeadAttention computed for all heads at once.
+
+    Same maths as the loop above, organised for the GPU: one big query/key/value layer
+    instead of n_head small ones, and the heads kept as an extra tensor dimension so every
+    head's scores come out of a single matrix multiply. GPUs are fast at a few big operations
+    and slow at many small ones, each of which costs a fixed launch overhead.
+    """
+
+    def __init__(self, n_embd: int, n_head: int, dropout: float = 0.0):
+        super().__init__()
+        if n_embd % n_head != 0:
+            raise ValueError(f"n_embd ({n_embd}) must be divisible by n_head ({n_head})")
+        self.n_head = n_head
+        self.head_size = n_embd // n_head
+        # Each layer is every head's projection stacked: rows 0..hs-1 are head 0, and so on.
+        self.query = nn.Linear(n_embd, n_embd, bias=False)
+        self.key = nn.Linear(n_embd, n_embd, bias=False)
+        self.value = nn.Linear(n_embd, n_embd, bias=False)
+        self.proj = nn.Linear(n_embd, n_embd)
+        self.attn_dropout = nn.Dropout(dropout)
+        self.dropout = nn.Dropout(dropout)
+
+    def split_heads(self, t: torch.Tensor) -> torch.Tensor:
+        """(B, T, n_embd) -> (B, n_head, T, head_size): cut the channels into one slice per head."""
+        B, T, _ = t.shape
+        return t.view(B, T, self.n_head, self.head_size).transpose(1, 2)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        B, T, C = x.shape
+        q = self.split_heads(self.query(x))
+        k = self.split_heads(self.key(x))
+        v = self.split_heads(self.value(x))
+        # The angles are computed once and shared by every head (they broadcast over the
+        # n_head dimension), instead of once per head.
+        cos, sin = rope_angles(T, self.head_size, device=x.device)
+        q, k = apply_rope(q, cos, sin), apply_rope(k, cos, sin)
+        # (B, nh, T, hs) @ (B, nh, hs, T) -> (B, nh, T, T): every head's scores in one go.
+        scores = q @ k.transpose(-2, -1) / math.sqrt(self.head_size)
+        weights = self.attn_dropout(F.softmax(mask_future(scores), dim=-1))
+        out = weights @ v  # (B, nh, T, hs)
+        # Glue the heads back side by side: (B, nh, T, hs) -> (B, T, nh * hs = n_embd).
+        out = out.transpose(1, 2).reshape(B, T, C)
+        return self.dropout(self.proj(out))

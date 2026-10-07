@@ -3,6 +3,7 @@ import torch
 
 from pretrain.attention import (
     AttentionHead,
+    CausalSelfAttention,
     MultiHeadAttention,
     causal_average,
     causal_average_weights,
@@ -95,3 +96,23 @@ def test_head_tells_positions_apart_even_when_their_contents_are_identical():
     x = torch.randn(1, 1, 16).expand(1, 6, 16)  # the same vector at all 6 positions
     last_row = head.attention_weights(x)[0, -1]
     assert not torch.allclose(last_row, torch.full((6,), 1 / 6), atol=1e-3)
+
+
+def test_batched_attention_matches_the_loop_of_heads_exactly():
+    # Same maths, organised differently: give the batched version the loop version's weights
+    # (each head's rows stacked into one big matrix) and the outputs must agree.
+    torch.manual_seed(0)
+    loop = MultiHeadAttention(n_embd=16, n_head=4)
+    batched = CausalSelfAttention(n_embd=16, n_head=4)
+    with torch.no_grad():
+        for name in ("query", "key", "value"):
+            stacked = torch.cat([getattr(h, name).weight for h in loop.heads], dim=0)
+            getattr(batched, name).weight.copy_(stacked)
+        batched.proj.load_state_dict(loop.proj.state_dict())
+        x = torch.randn(2, 6, 16)
+        assert torch.allclose(batched(x), loop(x), atol=1e-6)
+
+
+def test_batched_attention_rejects_channels_that_do_not_split_evenly():
+    with pytest.raises(ValueError, match="divisible"):
+        CausalSelfAttention(n_embd=10, n_head=4)
