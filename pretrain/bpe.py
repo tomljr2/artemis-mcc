@@ -59,3 +59,40 @@ def train_bpe(text: str, num_merges: int) -> dict[tuple[int, int], int]:
         words = {tuple(merge(list(ids), pair, new_id)): n for ids, n in words.items()}
         merges[pair] = new_id
     return merges
+
+
+class BPETokenizer:
+    """Text <-> token ids, using merges learned by train_bpe."""
+
+    def __init__(self, merges: dict[tuple[int, int], int]):
+        self.merges = merges
+        # What each id spells: the 256 single bytes, then each merge = its two halves joined.
+        self.vocab = {i: bytes([i]) for i in range(256)}
+        for (a, b), new_id in merges.items():
+            self.vocab[new_id] = self.vocab[a] + self.vocab[b]
+        self.vocab_size = len(self.vocab)
+        self._cache: dict[str, list[int]] = {}  # each distinct word is encoded only once
+
+    @classmethod
+    def train(cls, text: str, vocab_size: int) -> "BPETokenizer":
+        return cls(train_bpe(text, num_merges=vocab_size - 256))
+
+    def encode_word(self, word: str) -> list[int]:
+        if word not in self._cache:
+            ids = list(word.encode("utf-8"))
+            # Apply merges in the order they were learned: always the earliest-learned pair
+            # present (lowest id), until no pair in the word has a merge.
+            while len(ids) >= 2:
+                pair = min(pairwise(ids), key=lambda p: self.merges.get(p, float("inf")))
+                if pair not in self.merges:
+                    break
+                ids = merge(ids, pair, self.merges[pair])
+            self._cache[word] = ids
+        return self._cache[word]
+
+    def encode(self, text: str) -> list[int]:
+        return [i for word in split_words(text) for i in self.encode_word(word)]
+
+    def decode(self, ids: list[int]) -> str:
+        # errors="replace": a sequence the model invents may cut a character's bytes in half.
+        return b"".join(self.vocab[i] for i in ids).decode("utf-8", errors="replace")

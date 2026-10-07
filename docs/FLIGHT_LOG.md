@@ -446,3 +446,14 @@ because the junk merges were common.
 11.7 s. 86 tests pass.
 **Anomalies:** Encoding text by trying every merge on every word occurrence is slow.
 **Next:** BPETokenizer with encode/decode.
+
+## 2026-10-07 · Phase 1 · Stage 3 · Step 3: BPETokenizer
+**Objective:** A usable tokenizer: train, encode, decode.
+**What I did:** `BPETokenizer` in `pretrain/bpe.py`: vocab built from merges, encode
+applies the earliest-learned merge first within each word, with a per-word cache.
+**What I learned:** Starting from bytes means nothing is unknown: unseen characters
+("ΔV", emoji) are spelled out byte by byte, and decode(encode(text)) is exact.
+**Measurements:** Transcript, vocab 512: train 9.9 s, encode 826k chars in 0.26 s,
+2.02 chars/token, exact round trip. Longest tokens: " Houston", "COLUMBIA", " Apollo".
+89 tests pass.
+**Next:** Compare with GPT-2's tokenizer on aerospace terms.

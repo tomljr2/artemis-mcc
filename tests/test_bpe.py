@@ -1,4 +1,4 @@
-from pretrain.bpe import merge, pair_counts, split_words, train_bpe
+from pretrain.bpe import BPETokenizer, merge, pair_counts, split_words, train_bpe
 
 
 def test_pair_counts_counts_each_pair_of_neighbours():
@@ -49,3 +49,23 @@ def test_merges_never_cross_a_word_boundary():
     # Across the whole text, "a" + "." is the most common pair (3 times). But "a" and "."
     # are in different words, so the first merge must be " " + "a" (2 times) instead.
     assert train_bpe("a. a. a.", num_merges=1) == {(32, 97): 256}
+
+
+def test_tokenizer_encodes_a_learned_pair_as_one_token():
+    tok = BPETokenizer.train("ab ab ab", vocab_size=257)
+    assert tok.vocab_size == 257
+    assert tok.encode(" ab") == [32, 256]
+
+
+def test_decode_reverses_encode_even_for_characters_never_seen_in_training():
+    # Starting from bytes means nothing is ever "unknown": an unseen character is just
+    # spelled out as its raw UTF-8 bytes.
+    tok = BPETokenizer.train("Houston, Tranquility Base here. " * 20, vocab_size=300)
+    text = "Houston: ΔV = 3.1 km/s, café, launch \U0001f680\n\n  Over."
+    assert tok.decode(tok.encode(text)) == text
+
+
+def test_merges_compress_the_text_they_were_trained_on():
+    text = "Houston, Tranquility Base here. " * 20
+    tok = BPETokenizer.train(text, vocab_size=300)
+    assert len(tok.encode(text)) < len(text.encode("utf-8")) / 3
