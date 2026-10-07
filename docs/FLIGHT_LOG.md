@@ -501,3 +501,15 @@ more text per step. The train/val gap widened (each training token seen ~86 time
 **Anomalies:** The model reproduces PDF scan stamps ("ORBIGINAL PAGE"): leftover noise
 from the book cleaning.
 **Next:** Phase 1, Stage 4: learning-rate schedule (warmup + cosine decay).
+
+## 2026-10-07 · Phase 1 · Stage 4 · Step 1: Learning-rate schedule
+**Objective:** Warmup + cosine decay instead of a constant step size.
+**What I did:** `learning_rate()` in `train.py` (1,000-step linear warmup, cosine to 1/10 of
+the 1e-3 peak); set on the optimizer before every step. Three tests.
+**What I learned:** Warmup starts slower and catches up by ~5,000 steps. The late small
+steps improved training fit more than validation: with 1.9M training tokens the limit is
+the data again, not the optimizer.
+**Measurements:** Best (step 31,000): val transcript 1.174, val book 1.276 vs 1.184 /
+1.279 constant (a tie). Final train 0.884 vs 0.900. Chart: `docs/curves/lr_schedule.png`.
+95 tests pass.
+**Next:** Gradient clipping.

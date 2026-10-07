@@ -4,7 +4,7 @@ import torch
 
 from pretrain.bigram import BigramModel
 from pretrain.gpt import GPT
-from pretrain.train import estimate_loss, loss_per_char, train_step
+from pretrain.train import estimate_loss, learning_rate, loss_per_char, train_step
 
 
 def test_train_step_lowers_the_loss_on_a_repeated_batch():
@@ -50,3 +50,23 @@ def test_gpt_can_memorize_a_single_batch():
 def test_loss_per_character_spreads_the_token_loss_over_its_characters():
     # A token loss of 2.5 on tokens that average 2.5 characters = 1.0 per character.
     assert math.isclose(loss_per_char(2.5, n_chars=250, n_tokens=100), 1.0)
+
+
+SCHEDULE = {"max_lr": 1e-3, "min_lr": 1e-4, "warmup_steps": 100, "max_steps": 1100}
+
+
+def test_warmup_climbs_in_a_straight_line_to_the_peak():
+    assert math.isclose(learning_rate(0, **SCHEDULE), 1e-5)  # 1/100 of the peak
+    assert math.isclose(learning_rate(49, **SCHEDULE), 5e-4)  # halfway up
+    assert math.isclose(learning_rate(99, **SCHEDULE), 1e-3)  # at the peak
+
+
+def test_decay_follows_a_cosine_down_to_the_minimum():
+    assert math.isclose(learning_rate(100, **SCHEDULE), 1e-3)  # starts at the peak
+    assert math.isclose(learning_rate(600, **SCHEDULE), 5.5e-4)  # halfway: midpoint
+    assert math.isclose(learning_rate(1100, **SCHEDULE), 1e-4)  # ends at the minimum
+
+
+def test_learning_rate_never_leaves_the_range():
+    rates = [learning_rate(step, **SCHEDULE) for step in range(1101)]
+    assert all(1e-5 - 1e-12 <= lr <= 1e-3 + 1e-12 for lr in rates)

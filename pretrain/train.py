@@ -5,6 +5,7 @@ Run from the repo root:  python -m pretrain.train --model gpt     (or --model bi
 """
 
 import argparse
+import math
 import time
 from pathlib import Path
 
@@ -29,12 +30,16 @@ CONFIGS = {
         "block_size": 8,  # context length (the bigram model only uses the last token anyway)
         "batch_size": 32,  # windows per step
         "learning_rate": 1e-2,  # how big each nudge is
+        "min_learning_rate": 1e-2,  # same as the peak: no schedule for the bigram
+        "warmup_steps": 0,
         "max_steps": 3000,
     },
     "gpt": {
         "block_size": 64,  # context length in characters
         "batch_size": 64,
-        "learning_rate": 1e-3,  # attention is less forgiving of big steps than a table
+        "learning_rate": 1e-3,  # peak step size; attention is less forgiving than a table
+        "min_learning_rate": 1e-4,  # the schedule decays to a tenth of the peak
+        "warmup_steps": 1000,  # ramp up over the first 2.5% of training
         "max_steps": 40000,  # 10,000 left every loss still falling on transcript + books
         "n_embd": 128,  # channels per position
         "n_head": 4,  # attention heads, each n_embd // n_head = 32 channels wide
@@ -49,6 +54,7 @@ CONFIGS = {
         # Transcript + books, 10,000 steps: val transcript 1.333, val book 1.413, all
         # still falling: the limit is now training time. 40,000 steps: 1.270 / 1.347.
         # BPE tokens (vocab 1,024), 40,000 steps, per character: 1.184 / 1.279.
+        # + warmup/cosine schedule: 1.174 / 1.276 (a tie; train fit improved more).
     },
 }
 EVAL_INTERVAL = 500  # report losses every this many steps
@@ -64,6 +70,21 @@ def train_step(
     loss.backward()  # 3. backprop: d(loss)/d(parameter) for every parameter
     optimizer.step()  # 4. move each parameter a little in the loss-lowering direction
     return loss.item()
+
+
+def learning_rate(
+    step: int, max_lr: float, min_lr: float, warmup_steps: int, max_steps: int
+) -> float:
+    """Step size for this step: a short linear warmup, then a cosine curve down to min_lr.
+
+    Warmup: the model starts random and its first gradients are wild, so begin with small
+    steps. Decay: near the end, smaller steps let it settle into a good spot instead of
+    bouncing around it.
+    """
+    if step < warmup_steps:
+        return max_lr * (step + 1) / warmup_steps
+    progress = (step - warmup_steps) / (max_steps - warmup_steps)  # 0 -> 1 over the decay
+    return min_lr + (max_lr - min_lr) * 0.5 * (1 + math.cos(math.pi * progress))
 
 
 def loss_per_char(loss_per_token: float, n_chars: int, n_tokens: int) -> float:
@@ -157,6 +178,15 @@ def main(model_name: str) -> None:
                 save_checkpoint(CHECKPOINT_PATH, model, gpt_args, tok, step, best_val_loss)
                 print(f"           saved new best to {CHECKPOINT_PATH}")
         if step < cfg["max_steps"]:
+            lr = learning_rate(
+                step,
+                cfg["learning_rate"],
+                cfg["min_learning_rate"],
+                cfg["warmup_steps"],
+                cfg["max_steps"],
+            )
+            for group in optimizer.param_groups:  # AdamW reads its step size from here
+                group["lr"] = lr
             x, y = get_batch(train_data, block_size, batch_size, device)
             train_step(model, optimizer, x, y)
 
