@@ -51,14 +51,14 @@ def test_model_stacks_n_layer_blocks():
 
 
 def test_blocks_that_output_zero_pass_the_embeddings_straight_through():
-    # Zero every block's last attention and MLP Linear layer (mlp.net[2]). With residuals the
+    # Zero every block's last attention and MLP Linear layer (mlp.down). With residuals the
     # embeddings then reach the final norm and lm_head unchanged, however deep the stack.
     model = make_model()
     with torch.no_grad():
         for block in model.blocks:
-            for layer in (block.attention.proj, block.mlp.net[2]):
-                layer.weight.zero_()
-                layer.bias.zero_()
+            for layer in (block.attention.proj, block.mlp.down):
+                for p in layer.parameters():
+                    p.zero_()
         idx = torch.tensor([[1, 2, 3]])
         embeddings = model.token_embedding(idx)
         logits, _ = model(idx)

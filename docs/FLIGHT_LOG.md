@@ -314,3 +314,16 @@ copies the loop's weights into the batched version proves it is the same maths.
 **Measurements:** 70.5 → 27.4 ms per training step; full run 768 → 343 s. Best val 1.270
 (was 1.272, same within noise). 60 tests pass.
 **Next:** Step 27: SwiGLU.
+
+## 2026-10-07 · Phase 1 · Step 27: SwiGLU
+**Objective:** Fourth modern delta: a gated MLP.
+**What I did:** `FeedForward` is now SwiGLU: `down(silu(gate(x)) * up(x))`, hidden size
+2/3 of 4 × n_embd to keep the size the same, no biases.
+**What I learned:** A learned gate (a volume knob per number) replaces ReLU's fixed rule.
+It learns faster, but four upgrades in a row have all landed at ~1.27: the bottleneck is
+now the data (one transcript), not the model.
+**Measurements:** 808,401 params. Val at step 500: 1.452 vs 1.513. Best val 1.268 vs 1.270.
+Final train loss 0.851 vs 0.905. 332 s. 62 tests pass.
+**Anomalies:** I flagged the data limit in step 19 but did not raise it until asked.
+Checklists in PLAN.md and pretrain/README.md were never ticked.
+**Next:** Update README status and checklists, then add more Apollo transcripts.
