@@ -47,7 +47,8 @@ CONFIGS = {
         # + RoPE 1.272, + batched heads 1.270, + SwiGLU 1.268. Evals wobble by ~0.01-0.02,
         # so these are all a tie: the limit was the data, not the model.
         # Transcript + books, 10,000 steps: val transcript 1.333, val book 1.413, all
-        # still falling: the limit is now training time.
+        # still falling: the limit is now training time. 40,000 steps: 1.270 / 1.347.
+        # BPE tokens (vocab 1,024), 40,000 steps, per character: 1.184 / 1.279.
     },
 }
 EVAL_INTERVAL = 500  # report losses every this many steps

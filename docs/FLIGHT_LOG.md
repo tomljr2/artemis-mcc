@@ -490,3 +490,14 @@ Checkpoints store the tokenizer's merges; `sample.py` uses them (`--tokens`).
 characters per token to compare tokenizers fairly.
 **Measurements:** 92 tests pass. The 40,000-step run's results go in the next entry.
 **Anomalies:** Piping training output through `tee` buffers it until the end; use `-u`.
+
+## 2026-10-07 · Phase 1 · Stage 3 · Step 6 results: BPE vs characters (Stage 3 done)
+**Measurements:** Best (step 36,500), loss per character: val transcript 1.184, val book
+1.279, train 0.908 (characters: 1.270 / 1.347 / 1.119). 1,049,216 params (characters:
+811,904). 25 min. Chart: `docs/curves/chars_vs_bpe.png`.
+**What I learned:** A clear win, well above the noise, but three things changed together:
+a 30% bigger model (vocab rows), ~160 characters of context instead of 64, and ~2.5x
+more text per step. The train/val gap widened (each training token seen ~86 times).
+**Anomalies:** The model reproduces PDF scan stamps ("ORBIGINAL PAGE"): leftover noise
+from the book cleaning.
+**Next:** Phase 1, Stage 4: learning-rate schedule (warmup + cosine decay).

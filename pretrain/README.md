@@ -42,7 +42,7 @@ reviewed, and committed with a Flight Log entry before the next one starts.
       comes with the Stage 4 data.)
 - [x] Compare token counts on aerospace terms (e.g. "LOX/LH2", "ΔV", "Isp", "TLI",
       "N₂O₄") against the GPT-2 tokenizer: `compare_tokenizers.py`, results in the Flight Log.
-- [ ] Train the GPT on BPE tokens instead of characters.
+- [x] Train the GPT on BPE tokens instead of characters.
 
 **Stage 4: real training**
 - [ ] Warmup + cosine or WSD schedule, gradient clipping, checkpoints, eval loss.
