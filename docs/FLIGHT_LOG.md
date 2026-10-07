@@ -336,3 +336,16 @@ open items listed honestly (overfit one batch, remove biases, loss curves).
 Phase 1) are three different numbering schemes. Always say "Phase 1, Stage 3", never
 "Stage 3" alone. No milestone tags: tags are only for real releases.
 **Next:** Add more Apollo transcripts to the training data.
+
+## 2026-10-07 · Phase 1 · Step: License log
+**Objective:** Find more training text, and record a license decision for every source.
+**What I did:** `data/license_log.csv` with three rows: Apollo 11 transcript (include),
+Apollo Journals site (exclude, all rights reserved), NASA's scanned Apollo 7-17 PDFs
+(pending, garbled text). `tests/test_license_log.py` checks every row and that the source
+we train on is marked include.
+**What I learned:** NASA hosts the other Apollo transcripts only as 1960s scans with poor
+text ("Houston" -> "Baueton", columns split apart). The clean typed versions belong to an
+independent, copyrighted site. Our Apollo 11 file came from a nasa.gov copy of that site,
+but it is NASA's document word for word.
+**Measurements:** 65 tests pass.
+**Next:** Choose NASA history books as additional training text.
