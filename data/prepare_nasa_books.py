@@ -15,6 +15,7 @@ import shutil
 import ssl
 import unicodedata
 import urllib.request
+from collections import Counter
 from pathlib import Path
 
 import certifi
@@ -94,6 +95,69 @@ def remove_footnote_markers(text: str) -> str:
     return FOOTNOTE.sub("", text)
 
 
+PAGE_NUMBER = re.compile(r"\d{1,3}")
+MAX_HEAD_WORDS = 8
+
+
+def _drop_page_numbers(words: list[str]) -> list[str]:
+    """Drop page-number tokens from the front of a word list."""
+    while words and PAGE_NUMBER.fullmatch(words[0]):
+        words = words[1:]
+    return words
+
+
+def _is_title_like(head: list[str]) -> bool:
+    # Two or more words, or one capitalised word like "MOONPORT". A single ordinary word such
+    # as "The" starts many pages without being a header.
+    return len(head) >= 2 or (head[0].isupper() and len(head[0]) >= 4)
+
+
+def find_running_heads(pages: list[str], min_pages: int = 5) -> dict[str, set[str]]:
+    """Phrases that appear at the start (or end) of at least min_pages pages.
+
+    Running headers repeat on page after page; ordinary text almost never starts or ends
+    pages with the same few words. Page numbers around them are ignored.
+
+    A header also continues the same way every time: "CHARIOTS FOR" is always followed by
+    "APOLLO", but "CHARIOTS FOR APOLLO" is followed by "The" only sometimes. So a longer
+    phrase only counts if it appears on at least 80% of the pages its shorter version does.
+    """
+    heads = {}
+    for side in ("start", "end"):
+        counts = Counter()  # keyed by word tuples, read inwards from the page edge
+        for page in pages:
+            words = page.split()
+            if side == "end":
+                words = words[::-1]  # read the end of the page backwards
+            words = _drop_page_numbers(words)
+            for n in range(1, min(MAX_HEAD_WORDS, len(words)) + 1):
+                counts[tuple(words[:n])] += 1
+        heads[side] = set()
+        for edge, n in counts.items():
+            consistent = len(edge) == 1 or n >= 0.8 * counts[edge[:-1]]
+            if n >= min_pages and consistent and _is_title_like(list(edge)):
+                in_order = edge if side == "start" else edge[::-1]
+                heads[side].add(" ".join(in_order))
+    return heads
+
+
+def strip_running_heads(page: str, heads: dict[str, set[str]]) -> str:
+    """Remove page numbers and the longest running head from both ends of a page."""
+    words = page.split()
+    for side in ("start", "end"):
+        if side == "end":
+            words = words[::-1]
+        words = _drop_page_numbers(words)
+        for n in range(MAX_HEAD_WORDS, 0, -1):
+            head = words[:n] if side == "start" else words[:n][::-1]
+            if " ".join(head) in heads[side]:
+                words = _drop_page_numbers(words[n:])
+                break
+        if side == "end":
+            words = words[::-1]
+    return " ".join(words)
+
+
 def included_urls() -> set[str]:
     with LICENSE_LOG.open(encoding="utf-8", newline="") as f:
         return {row["url"] for row in csv.DictReader(f) if row["decision"] == "include"}
@@ -128,6 +192,8 @@ def main() -> None:
             for p in prose
             if not is_back_matter(p)
         ]
+        heads = find_running_heads(kept)  # this book's titles and chapter titles
+        kept = [strip_running_heads(p, heads) for p in kept]
         text = "\n\n".join(kept) + "\n"
         (TEXT_DIR / f"{book_id}.txt").write_text(text, encoding="utf-8", newline="\n")
         print(f"{book_id}: kept {len(kept)} of {len(pages)} pages, {len(text):,} characters")

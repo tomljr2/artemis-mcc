@@ -536,3 +536,16 @@ tables. Some prose appendices are lost as a side effect.
 **Measurements:** Books 4.60M -> 3.54M chars; stamps 31 -> 0, glued footnotes 658 -> 0,
 notes pages ~108 -> 0. 107 tests pass. Model not retrained yet.
 **Next:** Running headers and page numbers, then retrain tokenizer and model.
+
+## 2026-10-07 · Phase 1 · Stage 4 · Step 4: Strip running headers and page numbers
+**Objective:** Remove book and chapter titles repeated at page edges.
+**What I did:** `find_running_heads` (a phrase at the start or end of 5+ pages that
+continues the same way on 80%+ of them) and `strip_running_heads` (removes it and nearby
+page numbers). Headers are discovered per book, not hard-coded.
+**What I learned:** A frequency rule alone made "MOONPORT The" a header and would have
+deleted real words; the "continues the same way" check fixed it.
+**Measurements:** "CHARIOTS FOR APOLLO" ~164 -> 5, "Where No Man Has Gone Before" ~175 -> 6,
+pages starting/ending with a page number -> 0. Books 3.54M -> 3.52M chars. 111 tests pass.
+**Anomalies:** Left for Phase 2: unnumbered page-bottom footnotes, words split across
+pages, photo-caption junk, partial chapter titles.
+**Next:** Retrain the tokenizer and model on the cleaned text.

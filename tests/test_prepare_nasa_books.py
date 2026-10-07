@@ -1,9 +1,11 @@
 from data.prepare_nasa_books import (
     clean_page,
+    find_running_heads,
     is_back_matter,
     is_prose,
     remove_footnote_markers,
     remove_scan_stamps,
+    strip_running_heads,
 )
 
 PROSE = (
@@ -91,3 +93,62 @@ def test_a_page_of_numbered_citations_is_back_matter_even_without_a_label():
         for n in range(20, 30)
     )
     assert is_back_matter("Where No Man Has Gone Before " + citations)
+
+
+BOOK_PAGES = [
+    "CHARIOTS FOR APOLLO on Rector and his group revised the plan. 100",
+    "MATCHING MODULES AND MISSIONS had met in October for briefings. 101",
+    "CHARIOTS FOR APOLLO Shea tried to persuade Wiesner and Golovin. 102",
+    "MATCHING MODULES AND MISSIONS additional studies were agreed upon. 103",
+    "CHARIOTS FOR APOLLO The crawler received a further boost in June. 104",
+    "MATCHING MODULES AND MISSIONS The board met again in December. 105",
+    "CHARIOTS FOR APOLLO The lunar module design was frozen that spring. 106",
+    "MATCHING MODULES AND MISSIONS The test pilots flew the trainer daily. 107",
+    "CHARIOTS FOR APOLLO The schedule slipped by three months that year. 108",
+    "MATCHING MODULES AND MISSIONS The contract was signed in November. 109",
+]
+
+
+def test_titles_repeated_at_the_start_of_many_pages_are_running_heads():
+    heads = find_running_heads(BOOK_PAGES)
+    assert "CHARIOTS FOR APOLLO" in heads["start"]
+    assert "MATCHING MODULES AND MISSIONS" in heads["start"]
+
+
+def test_ordinary_sentence_starts_are_not_running_heads():
+    # "The" begins all six pages, but it is an ordinary word, not a title.
+    pages = [
+        "The crew rested before the burn.",
+        "The pad was cleared at dawn.",
+        "The booster arrived by barge.",
+        "The engineers checked the valves.",
+        "The flight plan was revised.",
+        "The tracking station lost signal.",
+    ]
+    assert find_running_heads(pages)["start"] == set()
+
+
+def test_running_heads_and_page_numbers_are_stripped_from_both_ends():
+    heads = {"start": {"MOONPORT", "CHARIOTS FOR APOLLO"}, "end": {"MEN FOR THE MOON", "APOLLO"}}
+    assert strip_running_heads("CHARIOTS FOR APOLLO The crawler was slow. 104", heads) == (
+        "The crawler was slow."
+    )
+    assert strip_running_heads("116 MOONPORT A trip by barge or by rail?", heads) == (
+        "A trip by barge or by rail?"
+    )
+    assert strip_running_heads("the requirement had been dropped 146 APOLLO", heads) == (
+        "the requirement had been dropped"
+    )
+    assert strip_running_heads("crashed and burned. MEN FOR THE MOON 147", heads) == (
+        "crashed and burned."
+    )
+
+
+def test_a_running_head_does_not_swallow_the_word_that_often_follows_it():
+    # The title starts all 12 pages; "The" follows it on 6. "CHARIOTS FOR APOLLO The" is
+    # frequent, but it is not a header: headers continue the same way on (nearly) every page.
+    pages = [f"CHARIOTS FOR APOLLO The test number {n} went well." for n in range(6)]
+    pages += [f"CHARIOTS FOR APOLLO engineers ran test number {n}." for n in range(6)]
+    heads = find_running_heads(pages)["start"]
+    assert "CHARIOTS FOR APOLLO" in heads
+    assert "CHARIOTS FOR APOLLO The" not in heads
