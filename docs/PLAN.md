@@ -192,7 +192,8 @@ model by X points and cuts confident wrong answers by Y%."
 
 ## Open questions
 
-- [x] Local GPU? **GTX 1080 8 GB:** local debugging only; real runs in the cloud.
+- [x] Local GPU? **GTX 1080 8 GB.** Artemis I trains entirely locally (owner's choice: no
+      cloud run). Phase 3 fine-tuning of a 4B-9B model still needs a bigger GPU.
 - [ ] Base model for Artemis II (decide at the start of Phase 3; Apache-2.0 small models).
 - [ ] Hours per week (sets the real timeline).
 - [ ] Public from day one, or private until Artemis I ships?
