@@ -66,6 +66,18 @@ CONFIGS = {
         # 80% -> 1.087 / 1.204. 50%, 300,000 steps: 1.054 / 1.154 (model-limited now).
     },
 }
+CONFIGS["gpt-11m"] = {
+    # The same recipe, 11x the parameters: with the web text there is now enough data to
+    # feed a bigger model. Wider (384 channels) and deeper (6 blocks); 6 heads of 64
+    # channels each, as in GPT-2. On the GTX 1080: ~90 ms per step vs ~35 ms.
+    **CONFIGS["gpt"],
+    "n_embd": 384,
+    "n_head": 6,
+    "n_layer": 6,
+    # --web, 50% NASA, 40,000 steps: best at step 10,000, 1.056 / 1.167 (1M model: 1.095 /
+    # 1.188 at 40,000). Then it memorizes the small NASA text: NASA train 0.354, val
+    # transcript 1.208, val book 1.321 at step 40,000. Web val keeps improving (1.161).
+}
 EVAL_INTERVAL = 500  # report losses every this many steps
 EVAL_BATCHES = 100  # batches averaged per loss report
 
@@ -237,7 +249,7 @@ def main(
             val = (losses["val transcript"] + losses["val book"]) / 2
             # Keep the best model seen so far, not just the last one: if training starts to
             # overfit, the saved copy is still the version that did best on unseen text.
-            if model_name == "gpt" and val < best_val_loss:
+            if model_name != "bigram" and val < best_val_loss:
                 best_val_loss = val
                 save_checkpoint(checkpoint_path, model, gpt_args, tok, step, best_val_loss)
                 print(f"           saved new best to {checkpoint_path}")

@@ -619,3 +619,20 @@ train web 1.231. Curves: `docs/curves/web_mixtures.png`, `docs/curves/web_nasa50
 the 1M-parameter model, not the data, is now the limit. Documents are joined with blank
 lines, no end-of-document marker. The tokenizer was trained on NASA text only.
 **Next:** Scale the model up now that there is data to support it.
+
+## 2026-10-08 · Phase 1 · Stage 4 · Step 10: A bigger model (11M parameters)
+**Objective:** Test whether model size is now the limit.
+**What I did:** Added the `gpt-11m` config: 384 channels, 6 blocks, 6 heads of 64; all
+other settings as `gpt`. Trained 40,000 steps on the 50/50 NASA/web mixture.
+**What I learned:** Size was the limit: by step 10,000 (22 min) the 11M model matched
+the 1M model's 3.6-hour run. But a bigger model also memorizes faster. With half of every
+batch drawn from only 1.45M NASA tokens (56 passes over them by step 40,000), NASA train
+loss kept falling while NASA validation rose: overfitting. The web text, ~100x larger,
+shows no gap at all.
+**Measurements:** Best (step 10,000): val transcript 1.056, val book 1.167 (1M at 40,000:
+1.095 / 1.188; 1M at 300,000: 1.054 / 1.154). Step 40,000: NASA train 0.354, val
+transcript 1.208, val book 1.321; web train 1.159, val 1.161. 11M is 2.7x slower per step
+(91 vs 34 ms). Curve: `docs/curves/gpt11m_vs_1m.png`.
+**Anomalies:** The best-checkpoint rule saved the step-10,000 model, so nothing was lost,
+but most of the run was wasted.
+**Next:** Fit the NASA weight to the model: fewer repeats of the small NASA text.

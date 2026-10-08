@@ -7,6 +7,7 @@ from pretrain.bigram import BigramModel
 from pretrain.bpe import BPETokenizer
 from pretrain.gpt import GPT
 from pretrain.train import (
+    CONFIGS,
     clip_gradients,
     encode_to_tensor,
     estimate_loss,
@@ -134,3 +135,24 @@ def test_encoding_into_compact_storage_gives_the_same_ids():
     ids = encode_to_tensor(tok, text)
     assert ids.dtype == torch.int16  # 2 bytes per token instead of 8
     assert ids.tolist() == tok.encode(text)
+
+
+def gpt_from_config(name: str) -> GPT:
+    cfg = CONFIGS[name]
+    keys = ("block_size", "n_embd", "n_head", "n_layer", "dropout")
+    return GPT(vocab_size=1024, **{k: cfg[k] for k in keys})
+
+
+def test_every_gpt_config_builds_a_model_that_runs():
+    for name in CONFIGS:
+        if name.startswith("gpt"):
+            model = gpt_from_config(name)
+            logits, _ = model(torch.zeros((1, 8), dtype=torch.long))
+            assert logits.shape == (1, 8, 1024), name
+
+
+def test_the_bigger_config_has_about_ten_times_the_parameters():
+    def count(name):
+        return sum(p.numel() for p in gpt_from_config(name).parameters())
+
+    assert 9 < count("gpt-11m") / count("gpt") < 13
