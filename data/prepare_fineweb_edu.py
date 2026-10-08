@@ -43,11 +43,8 @@ def split_documents(docs: list[str], val_every: int = VAL_EVERY) -> tuple[list[s
     return train, val
 
 
-def main() -> None:
-    if DATASET_URL not in included_urls():
-        print(f"skipped: no 'include' row for {DATASET_URL} in the license log")
-        return
-    download(SHARD_URL, RAW_PATH)
+def load_documents() -> tuple[list[str], int]:
+    """(cleaned documents, documents read) from the downloaded file, in their original order."""
     docs, n_seen, n_chars = [], 0, 0
     for batch in pq.ParquetFile(RAW_PATH).iter_batches(batch_size=10_000, columns=["text"]):
         for text in batch.column("text").to_pylist():
@@ -58,6 +55,15 @@ def main() -> None:
                 n_chars += len(doc)
         if n_chars >= TARGET_CHARS / (1 - 1 / VAL_EVERY):  # enough left after holding out val
             break
+    return docs, n_seen
+
+
+def main() -> None:
+    if DATASET_URL not in included_urls():
+        print(f"skipped: no 'include' row for {DATASET_URL} in the license log")
+        return
+    download(SHARD_URL, RAW_PATH)
+    docs, n_seen = load_documents()
     train, val = split_documents(docs)
     TEXT_DIR.mkdir(parents=True, exist_ok=True)
     for name, part in (("train", train), ("val", val)):

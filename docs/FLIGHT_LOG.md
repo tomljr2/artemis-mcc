@@ -730,3 +730,19 @@ are grammatical but loop ("The capital of France is the capital of France").
 **Anomalies:** Not a fair race yet: different text (ClimbMix vs FineWeb-Edu), vocabulary
 (32,768 vs 4,096), context (512 vs 64 tokens) and amount read (82M vs 41M tokens).
 **Next:** Put both trainers on the same data, so the gap can be split into its causes.
+
+## 2026-10-08 · Phase 1 · Stage 4 · Step 17: Give nanochat our data
+**Objective:** Let nanochat train and validate on exactly our FineWeb-Edu documents.
+**What I did:** Added `data/export_nanochat.py`: it writes our train documents as numbered
+parquet shards and our val documents as the last shard, the layout nanochat expects. Moved
+the document loading in `prepare_fineweb_edu.py` into `load_documents()` so both scripts
+read the same documents. nanochat finds the shards via `NANOCHAT_BASE_DIR`, again with no
+code changes to it.
+**What I learned:** Our `train.txt` can't be split back into documents (documents contain
+blank lines themselves), so the export rebuilds them from the downloaded file instead.
+**Measurements:** 133 tests pass. 85,041 train documents in 9 shards, 860 val documents in
+the last; joined back together they equal our `train.txt` and `val.txt` character for
+character. 187 MB, exported in 2.4 min. nanochat's own reader returns the same first
+documents.
+**Next:** Train nanochat's tokenizer and model on these shards, and compare its val bits
+per byte with our web val directly.
