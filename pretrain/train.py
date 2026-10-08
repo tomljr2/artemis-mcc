@@ -83,6 +83,8 @@ CONFIGS["gpt-11m"] = {
     # 25%: 1.074 / 1.125, web 1.139 (NASA-only tokenizer: 1.048 / 1.121, web 1.148).
     # Vocabulary 4,096 learned from NASA + web (tokenizer_4096_mix.json), 13.8M parameters:
     # 0.989 / 1.082, web 1.080. Also sees ~1.5x more characters per window and per step.
+    # Control, 1,024 tokenizer with --block-size 96 (same characters per window):
+    # 1.001 / 1.108, web 1.117, and 31% slower than the 4,096 run.
 }
 EVAL_INTERVAL = 500  # report losses every this many steps
 EVAL_BATCHES = 100  # batches averaged per loss report
@@ -188,10 +190,13 @@ def main(
     max_steps: int | None = None,
     checkpoint_path: Path = CHECKPOINT_PATH,
     tokenizer_path: Path = TOKENIZER_PATH,
+    block_size: int | None = None,
 ) -> None:
     cfg = CONFIGS[model_name]
     if max_steps is not None:
         cfg = {**cfg, "max_steps": max_steps}
+    if block_size is not None:  # RoPE has no position table, so any length works
+        cfg = {**cfg, "block_size": block_size}
     torch.manual_seed(11)
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -291,7 +296,16 @@ if __name__ == "__main__":
         help="share of training windows from NASA text with --web (default: in proportion to size)",
     )
     parser.add_argument("--max-steps", type=int, help="override the config's max_steps")
+    parser.add_argument("--block-size", type=int, help="override the context length in tokens")
     parser.add_argument("--checkpoint", type=Path, default=CHECKPOINT_PATH)
     parser.add_argument("--tokenizer", type=Path, default=TOKENIZER_PATH)
     args = parser.parse_args()
-    main(args.model, args.web, args.nasa_weight, args.max_steps, args.checkpoint, args.tokenizer)
+    main(
+        args.model,
+        args.web,
+        args.nasa_weight,
+        args.max_steps,
+        args.checkpoint,
+        args.tokenizer,
+        args.block_size,
+    )

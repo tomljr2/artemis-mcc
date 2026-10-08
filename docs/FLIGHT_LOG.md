@@ -683,3 +683,19 @@ characters per 64-token window (~1.4x more context and more text per step).
 1.048 / 1.121 / 1.148 -> 0.989 / 1.082 / 1.080. 7% slower per step.
 **Anomalies:** The improvement cannot yet be split between vocabulary and longer context.
 **Next:** A control run: the old tokenizer with a longer window, to separate the two.
+
+## 2026-10-08 · Phase 1 · Stage 4 · Step 14: Separate vocabulary from context
+**Objective:** Find out how much of the 4,096-vocabulary win came from longer context.
+**What I did:** Added `train.py --block-size`. Control run: the old 1,024-token NASA
+tokenizer with a 96-token window (about the same characters per window as 64 tokens of
+the 4,096 tokenizer), otherwise identical (`gpt-11m`, 25% NASA, 10,000 steps).
+**What I learned:** Both mattered, differently per text. On the transcript most of the
+gain was context (0.047 of 0.059); on the book and web text, the vocabulary did more.
+And the bigger vocabulary gets the same context much more cheaply: fewer, bigger tokens
+mean less attention work per character.
+**Measurements:** val transcript / book / web: 64-token baseline 1.048 / 1.121 / 1.148;
+control (96 tokens) 1.001 / 1.108 / 1.117; vocab 4,096 0.989 / 1.082 / 1.080. Time for
+10,000 steps: control 1,858 s, vocab 4,096 1,422 s.
+**Anomalies:** The 4,096 model also has 2.4M more parameters (its bigger token tables),
+so the remaining gap is vocabulary plus those parameters, not vocabulary alone.
+**Next:** Make the winning recipe the default.
