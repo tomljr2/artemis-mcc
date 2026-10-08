@@ -79,6 +79,8 @@ CONFIGS["gpt-11m"] = {
     # transcript 1.208, val book 1.321 at step 40,000. Web val keeps improving (1.161).
     # 10,000-step runs by NASA share: 10% 1.113 / 1.147, 25% 1.048 / 1.121 (best so far),
     # 50% 1.042 / 1.145. Use --nasa-weight 0.25 with this config.
+    # Tokenizer learned from NASA + web (--tokenizer checkpoints/tokenizer_1024_mix.json),
+    # 25%: 1.074 / 1.125, web 1.139 (NASA-only tokenizer: 1.048 / 1.121, web 1.148).
 }
 EVAL_INTERVAL = 500  # report losses every this many steps
 EVAL_BATCHES = 100  # batches averaged per loss report
@@ -183,6 +185,7 @@ def main(
     nasa_weight: float | None = None,
     max_steps: int | None = None,
     checkpoint_path: Path = CHECKPOINT_PATH,
+    tokenizer_path: Path = TOKENIZER_PATH,
 ) -> None:
     cfg = CONFIGS[model_name]
     if max_steps is not None:
@@ -197,7 +200,7 @@ def main(
     if web:  # general English: its own training text, and its own held-out documents
         texts["train web"] = (WEB_DIR / "train.txt").read_text(encoding="utf-8")
         texts["val web"] = (WEB_DIR / "val.txt").read_text(encoding="utf-8")
-    tok = BPETokenizer.load(TOKENIZER_PATH)
+    tok = BPETokenizer.load(tokenizer_path)
     splits = {name: encode_to_tensor(tok, text) for name, text in texts.items()}
     n_chars = {name: len(text) for name, text in texts.items()}
     del texts  # hundreds of MB of text no longer needed: the token ids are what we train on
@@ -287,5 +290,6 @@ if __name__ == "__main__":
     )
     parser.add_argument("--max-steps", type=int, help="override the config's max_steps")
     parser.add_argument("--checkpoint", type=Path, default=CHECKPOINT_PATH)
+    parser.add_argument("--tokenizer", type=Path, default=TOKENIZER_PATH)
     args = parser.parse_args()
-    main(args.model, args.web, args.nasa_weight, args.max_steps, args.checkpoint)
+    main(args.model, args.web, args.nasa_weight, args.max_steps, args.checkpoint, args.tokenizer)

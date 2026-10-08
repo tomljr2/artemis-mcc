@@ -651,3 +651,19 @@ run (1.054 / 1.154) in 23 minutes. All three were still improving at step 10,000
 **Anomalies:** 25% vs 50% on the transcript (0.006) is within run-to-run noise; the book
 difference (0.024) is not.
 **Next:** Train the tokenizer on NASA + web text instead of NASA alone.
+
+## 2026-10-08 · Phase 1 · Stage 4 · Step 12: A tokenizer learned from NASA + web text
+**Objective:** See whether a vocabulary that also fits general English helps.
+**What I did:** `train_tokenizer.py --web` learns from all NASA training text plus web
+text, 25% NASA by characters (15M characters; the Python trainer is too slow for all of
+it). Vocabulary still 1,024. `train.py --tokenizer` picks the tokenizer for a run.
+Compared both on held-out text, then trained `gpt-11m` 10,000 steps at 25% NASA with each.
+**What I learned:** With only 768 learned tokens, NASA and web words compete for slots:
+206 changed. Gained " information", " because", " people"; lost " spacecraft",
+" astronauts", " mission", " CDR", "Houston". The model follows the vocabulary: better on
+web text, worse on the transcript. For our goal (NASA text) the NASA-only tokenizer stays.
+**Measurements:** chars per token (NASA-only -> mixed): transcript 2.19 -> 2.14, book
+2.62 -> 2.59, web 2.40 -> 2.53. Model, val transcript / book / web: NASA-only tokenizer
+1.048 / 1.121 / 1.148; mixed 1.074 / 1.125 / 1.139.
+**Anomalies:** None. Both runs used the same seed, data and settings.
+**Next:** A bigger vocabulary, so NASA and general words both fit.
