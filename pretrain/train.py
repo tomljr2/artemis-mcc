@@ -77,6 +77,8 @@ CONFIGS["gpt-11m"] = {
     # --web, 50% NASA, 40,000 steps: best at step 10,000, 1.056 / 1.167 (1M model: 1.095 /
     # 1.188 at 40,000). Then it memorizes the small NASA text: NASA train 0.354, val
     # transcript 1.208, val book 1.321 at step 40,000. Web val keeps improving (1.161).
+    # 10,000-step runs by NASA share: 10% 1.113 / 1.147, 25% 1.048 / 1.121 (best so far),
+    # 50% 1.042 / 1.145. Use --nasa-weight 0.25 with this config.
 }
 EVAL_INTERVAL = 500  # report losses every this many steps
 EVAL_BATCHES = 100  # batches averaged per loss report

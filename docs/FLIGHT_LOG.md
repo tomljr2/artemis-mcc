@@ -636,3 +636,18 @@ transcript 1.208, val book 1.321; web train 1.159, val 1.161. 11M is 2.7x slower
 **Anomalies:** The best-checkpoint rule saved the step-10,000 model, so nothing was lost,
 but most of the run was wasted.
 **Next:** Fit the NASA weight to the model: fewer repeats of the small NASA text.
+
+## 2026-10-08 · Phase 1 · Stage 4 · Step 11: Fit the NASA share to the bigger model
+**Objective:** Find a NASA share that does not make the 11M model memorize NASA text.
+**What I did:** Three 10,000-step runs of `gpt-11m`, each with its own full schedule:
+10%, 25% and 50% NASA (about 2.8, 4.9 and 9.8 passes over the NASA text). No code changes.
+**What I learned:** 25% is best overall. The two NASA sets pull different ways: the
+transcript (an unusual format found nowhere else) wants more NASA, the book (ordinary
+English prose) wants more web text. 25% is the balance, at about 5 passes, close to the
+"about 4 passes" rule of thumb.
+**Measurements:** val transcript / val book / val web: 10% 1.113 / 1.147 / 1.129;
+25% 1.048 / 1.121 / 1.148; 50% 1.042 / 1.145 / 1.196. 25% beats the 1M model's 3.6-hour
+run (1.054 / 1.154) in 23 minutes. All three were still improving at step 10,000.
+**Anomalies:** 25% vs 50% on the transcript (0.006) is within run-to-run noise; the book
+difference (0.024) is not.
+**Next:** Train the tokenizer on NASA + web text instead of NASA alone.
