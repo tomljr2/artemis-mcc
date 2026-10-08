@@ -711,3 +711,22 @@ mixture, vocabulary); defaults should hold the combination that was measured.
 **Measurements:** 132 tests pass. A 500-step smoke run of the plain command trains the
 13.8M-parameter model on the 25/75 mixture.
 **Next:** Reproduce a small nanochat run as a reference check.
+
+## 2026-10-08 · Phase 1 · Stage 4 · Step 16: Run nanochat's small reference recipe
+**Objective:** Run a known-good trainer on our GPU, to have an outside yardstick for ours.
+**What I did:** Cloned nanochat outside the repo, gave it its own venv, downloaded 9
+ClimbMix shards and trained its 32,768-token tokenizer. Ran its small recipe (depth 6, 384
+channels, 512-token context, 16,384 tokens per step, 5,000 steps) with no code changes,
+only settings: `TORCHDYNAMO_DISABLE=1` (no `torch.compile` on Pascal), `PYTHONUTF8=1` (the
+Windows console), and 8 sequences per micro-batch with 4× gradient accumulation to fit in
+8 GB with the same math. Logged ClimbMix in the license log as reference-only, excluded.
+**What I learned:** Its transformer core matches our `gpt-11m` (6 layers, 384 channels,
+6 heads of 64, about 10.6M matrix parameters); its 73.5M total is mostly token tables.
+Its curve was still falling at the end, smoothly, with no sign of memorizing. The samples
+are grammatical but loop ("The capital of France is the capital of France").
+**Measurements:** val bits per byte 3.196 at step 0, 1.372 at 1,000, 1.223 at 3,000,
+1.164 at 5,000 (the minimum). 74.3 min, 0.87 s per step, 18,800 tokens/s, peak memory
+3.9 GB. Ours, converted (nats per char ÷ 0.693): best web val 1.080 → 1.56 bits per byte.
+**Anomalies:** Not a fair race yet: different text (ClimbMix vs FineWeb-Edu), vocabulary
+(32,768 vs 4,096), context (512 vs 64 tokens) and amount read (82M vs 41M tokens).
+**Next:** Put both trainers on the same data, so the gap can be split into its causes.
