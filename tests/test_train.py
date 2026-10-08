@@ -1,4 +1,5 @@
 import math
+from pathlib import Path
 
 import torch
 from torch import nn
@@ -8,11 +9,13 @@ from pretrain.bpe import BPETokenizer
 from pretrain.gpt import GPT
 from pretrain.train import (
     CONFIGS,
+    TOKENIZER_PATH,
     clip_gradients,
     encode_to_tensor,
     estimate_loss,
     learning_rate,
     loss_per_char,
+    parse_args,
     train_step,
 )
 
@@ -156,3 +159,19 @@ def test_the_bigger_config_has_about_ten_times_the_parameters():
         return sum(p.numel() for p in gpt_from_config(name).parameters())
 
     assert 9 < count("gpt-11m") / count("gpt") < 13
+
+
+def test_the_defaults_are_the_best_recipe_so_far():
+    args = parse_args([])
+    assert args.model == "gpt-11m"
+    assert args.web
+    assert args.nasa_weight == 0.25
+    assert args.tokenizer == TOKENIZER_PATH == Path("checkpoints/tokenizer_4096_mix.json")
+
+
+def test_earlier_recipes_can_still_be_reproduced():
+    args = parse_args(
+        ["--model", "gpt", "--no-web", "--tokenizer", "checkpoints/tokenizer_1024.json"]
+    )
+    assert (args.model, args.web) == ("gpt", False)
+    assert args.tokenizer == Path("checkpoints/tokenizer_1024.json")

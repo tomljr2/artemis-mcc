@@ -1,6 +1,8 @@
 """Training loop: repeatedly measure the loss and nudge the parameters to lower it.
 
-Run from the repo root:  python -m pretrain.train --model gpt     (or --model bigram)
+Run from the repo root:  python -m pretrain.train
+The defaults are the best recipe so far; flags reproduce earlier runs, e.g.
+    python -m pretrain.train --model gpt --no-web --tokenizer checkpoints/tokenizer_1024.json
 (-m runs it as part of the pretrain package, so its `from pretrain...` imports resolve.)
 """
 
@@ -24,7 +26,9 @@ TEXT_PATH = Path("data/processed/apollo11_tec.txt")
 BOOKS_DIR = Path("data/processed/nasa_books")  # made by: python -m data.prepare_nasa_books
 VAL_BOOKS = {"sp-350"}  # Apollo Expeditions to the Moon: held out whole, never trained on
 WEB_DIR = Path("data/processed/fineweb_edu")  # made by: python -m data.prepare_fineweb_edu
-TOKENIZER_PATH = Path("checkpoints/tokenizer_1024.json")  # python -m pretrain.train_tokenizer
+TOKENIZER_PATH = Path("checkpoints/tokenizer_4096_mix.json")  # python -m pretrain.train_tokenizer
+# Share of training windows drawn from NASA text; the rest is web text. Best for gpt-11m.
+NASA_WEIGHT = 0.25
 CHECKPOINT_PATH = Path("checkpoints/gpt_nasa.pt")  # git-ignored
 
 # Hyperparameters: settings we choose, as opposed to parameters the model learns.
@@ -78,7 +82,7 @@ CONFIGS["gpt-11m"] = {
     # 1.188 at 40,000). Then it memorizes the small NASA text: NASA train 0.354, val
     # transcript 1.208, val book 1.321 at step 40,000. Web val keeps improving (1.161).
     # 10,000-step runs by NASA share: 10% 1.113 / 1.147, 25% 1.048 / 1.121 (best so far),
-    # 50% 1.042 / 1.145. Use --nasa-weight 0.25 with this config.
+    # 50% 1.042 / 1.145.
     # Tokenizer learned from NASA + web (--tokenizer checkpoints/tokenizer_1024_mix.json),
     # 25%: 1.074 / 1.125, web 1.139 (NASA-only tokenizer: 1.048 / 1.121, web 1.148).
     # Vocabulary 4,096 learned from NASA + web (tokenizer_4096_mix.json), 13.8M parameters:
@@ -185,8 +189,8 @@ def estimate_loss(
 
 def main(
     model_name: str,
-    web: bool = False,
-    nasa_weight: float | None = None,
+    web: bool = True,
+    nasa_weight: float | None = NASA_WEIGHT,
     max_steps: int | None = None,
     checkpoint_path: Path = CHECKPOINT_PATH,
     tokenizer_path: Path = TOKENIZER_PATH,
@@ -286,20 +290,30 @@ def main(
     print(tok.decode(model.generate(start, max_new_tokens=500)[0].tolist()))
 
 
-if __name__ == "__main__":
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--model", choices=CONFIGS, default="gpt")
-    parser.add_argument("--web", action="store_true", help="also train on FineWeb-Edu text")
+    parser.add_argument("--model", choices=CONFIGS, default="gpt-11m")
+    parser.add_argument(
+        "--web",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="also train on FineWeb-Edu text (--no-web: NASA text only)",
+    )
     parser.add_argument(
         "--nasa-weight",
         type=float,
-        help="share of training windows from NASA text with --web (default: in proportion to size)",
+        default=NASA_WEIGHT,
+        help="share of training windows from NASA text, with --web",
     )
     parser.add_argument("--max-steps", type=int, help="override the config's max_steps")
     parser.add_argument("--block-size", type=int, help="override the context length in tokens")
     parser.add_argument("--checkpoint", type=Path, default=CHECKPOINT_PATH)
     parser.add_argument("--tokenizer", type=Path, default=TOKENIZER_PATH)
-    args = parser.parse_args()
+    return parser.parse_args(argv)
+
+
+if __name__ == "__main__":
+    args = parse_args()
     main(
         args.model,
         args.web,

@@ -699,3 +699,15 @@ control (96 tokens) 1.001 / 1.108 / 1.117; vocab 4,096 0.989 / 1.082 / 1.080. Ti
 **Anomalies:** The 4,096 model also has 2.4M more parameters (its bigger token tables),
 so the remaining gap is vocabulary plus those parameters, not vocabulary alone.
 **Next:** Make the winning recipe the default.
+
+## 2026-10-08 · Phase 1 · Stage 4 · Step 15: Make the best recipe the default
+**Objective:** Plain `python -m pretrain.train` should run the best recipe so far.
+**What I did:** New defaults: `gpt-11m`, web text on (`--no-web` turns it off), 25% NASA,
+the 4,096-token NASA + web tokenizer. `train_tokenizer.py` builds that tokenizer by
+default. Moved argument parsing into `parse_args` so the defaults are tested. Earlier
+recipes stay reachable with flags.
+**What I learned:** A recipe is many settings that only work well together (model size,
+mixture, vocabulary); defaults should hold the combination that was measured.
+**Measurements:** 132 tests pass. A 500-step smoke run of the plain command trains the
+13.8M-parameter model on the 25/75 mixture.
+**Next:** Reproduce a small nanochat run as a reference check.

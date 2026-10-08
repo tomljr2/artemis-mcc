@@ -2,9 +2,8 @@
 
 Trained on the training split only: the held-out book, transcript tail and web documents
 stay unseen.
-Run:  python -m pretrain.train_tokenizer                 NASA text only (~2 minutes)
-      python -m pretrain.train_tokenizer --web           NASA + web text
-      python -m pretrain.train_tokenizer --web --vocab-size 4096
+Run:  python -m pretrain.train_tokenizer      4,096 tokens from NASA + web text (~30 minutes)
+      python -m pretrain.train_tokenizer --no-web --vocab-size 1024    the first one (~2 min)
 """
 
 import argparse
@@ -15,10 +14,11 @@ from pretrain.bpe import BPETokenizer
 from pretrain.dataset import make_splits
 from pretrain.train import BOOKS_DIR, TEXT_PATH, VAL_BOOKS, WEB_DIR
 
-# 1,024 tokens by default: 256 bytes + 768 merges. Small on purpose: every token gets a row
-# in the model's input table and its output layer, and our first model was small.
-VOCAB_SIZE = 1024
-# With --web: NASA's share of the characters the tokenizer learns from. Matches the share of
+# 4,096 tokens: 256 bytes + 3,840 merges, enough room for NASA and everyday words both.
+# (Every token also gets a row in the model's input table and output layer: 2.4M
+# parameters more than 1,024 tokens for gpt-11m.)
+VOCAB_SIZE = 4096
+# NASA's share of the characters the tokenizer learns from. Matches the share of
 # training windows that works best for the 11M model, so the vocabulary fits what it reads.
 NASA_SHARE = 0.25
 
@@ -62,7 +62,12 @@ def main(web: bool, vocab_size: int) -> None:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--web", action="store_true", help="learn from NASA + web text")
+    parser.add_argument(
+        "--web",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="learn from NASA + web text (--no-web: NASA text only)",
+    )
     parser.add_argument("--vocab-size", type=int, default=VOCAB_SIZE)
     args = parser.parse_args()
     main(args.web, args.vocab_size)

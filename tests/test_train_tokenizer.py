@@ -1,6 +1,7 @@
 from pathlib import Path
 
-from pretrain.train_tokenizer import mixed_sample, tokenizer_path
+from pretrain.train import TOKENIZER_PATH
+from pretrain.train_tokenizer import VOCAB_SIZE, mixed_sample, tokenizer_path
 
 
 def test_the_sample_gives_nasa_its_share_of_the_characters():
@@ -23,3 +24,7 @@ def test_the_file_name_says_the_vocabulary_size_and_what_it_learned_from():
     assert tokenizer_path(1024, web=False) == Path("checkpoints/tokenizer_1024.json")
     assert tokenizer_path(1024, web=True) == Path("checkpoints/tokenizer_1024_mix.json")
     assert tokenizer_path(4096, web=True) == Path("checkpoints/tokenizer_4096_mix.json")
+
+
+def test_by_default_it_builds_the_tokenizer_training_uses():
+    assert tokenizer_path(VOCAB_SIZE, web=True) == TOKENIZER_PATH
