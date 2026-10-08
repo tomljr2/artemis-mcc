@@ -35,8 +35,16 @@ def test_split_words_keeps_letters_together_and_splits_off_punctuation():
     ]
 
 
-def test_split_words_keeps_numbers_together_and_splits_off_contractions():
-    assert split_words("04 13 we're") == ["04", " 13", " we", "'re"]
+def test_split_words_splits_numbers_into_single_digits_and_splits_off_contractions():
+    # Like Llama: every number is cut the same way, whichever numbers were common in
+    # training. (Otherwise "03" might be one token while "29" is two.)
+    assert split_words("04 13 we're") == ["0", "4", " 1", "3", " we", "'re"]
+
+
+def test_no_merged_token_ever_contains_two_digits():
+    tok = BPETokenizer.train("04 03 29 39 CC\n04 03 31 12 CMP\n" * 50, vocab_size=300)
+    pieces = [tok.vocab[i].decode("utf-8") for i in range(256, tok.vocab_size)]
+    assert not [p for p in pieces if sum(ch.isdigit() for ch in p) > 1]
 
 
 def test_split_words_loses_nothing():

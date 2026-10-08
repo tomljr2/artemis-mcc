@@ -56,6 +56,8 @@ CONFIGS = {
         # still falling: the limit is now training time. 40,000 steps: 1.270 / 1.347.
         # BPE tokens (vocab 1,024), 40,000 steps, per character: 1.184 / 1.279.
         # + warmup/cosine schedule: 1.174 / 1.276 (a tie; train fit improved more).
+        # Cleaned books: 1.252 / 1.277. + single-digit numbers in the tokenizer:
+        # 1.120 / 1.272 (timestamps are now cut consistently).
     },
 }
 EVAL_INTERVAL = 500  # report losses every this many steps

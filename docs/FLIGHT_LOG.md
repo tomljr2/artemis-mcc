@@ -574,3 +574,17 @@ worse (1.275 -> 1.972). Removing number-heavy back matter left the tokenizer wit
 some two-digit numbers as tokens (67 -> 45 number tokens), so "29" became "2"+"9" while
 "03" stayed whole: inconsistent pieces for the same kind of field.
 **Next:** Split numbers into single digits (as Llama does), retrain, rerun this check.
+
+## 2026-10-07 · Phase 1 · Stage 4 · Step 7: Split numbers into single digits
+**Objective:** Fix the transcript regression by cutting every number the same way.
+**What I did:** Changed the pre-tokenizer so each digit is its own piece (as in Llama).
+Retrained the tokenizer (2.57 chars/token) and the model (40,000 steps).
+**What I learned:** Consistent number pieces let the model learn that timestamps count
+upward. Also: the splitting rule lives in code, not in the tokenizer file, so changing it
+silently changed how the older saved models read text.
+**Measurements:** Best (step 25,500): val transcript 1.120 (cleaned 1.252, noisy 1.174),
+val book 1.272. Header lines 0.965 (cleaned 1.972, noisy 1.275), spoken lines 1.111.
+112 tests pass. Curve: `docs/curves/clean_digits.png`.
+**Anomalies:** A rerun of the diagnostic scored the older models with the new splitting
+rule and gave invalid numbers (2.869, 3.566); the figures above are from before the change.
+**Next:** Save the splitting rule inside the tokenizer file and checkpoints.

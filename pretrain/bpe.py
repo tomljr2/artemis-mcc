@@ -16,7 +16,9 @@ from pathlib import Path
 # inside a piece. Like GPT-2's rule: contractions ('s, 're, ...), letters with an optional
 # leading space, digits, punctuation, then whitespace. (GPT-2 writes letters as \p{L}, which
 # needs the third-party `regex` module; [^\W\d_] means the same with the built-in `re`.)
-WORD_PATTERN = re.compile(r"'(?:s|t|re|ve|m|ll|d)| ?[^\W\d_]+| ?\d+| ?(?:[^\s\w]|_)+|\s+(?!\S)|\s+")
+# Unlike GPT-2, each digit is its own piece (as in Llama): every number is then cut the same
+# way, instead of some two-digit numbers being one token and others two.
+WORD_PATTERN = re.compile(r"'(?:s|t|re|ve|m|ll|d)| ?[^\W\d_]+| ?\d| ?(?:[^\s\w]|_)+|\s+(?!\S)|\s+")
 
 
 def split_words(text: str) -> list[str]:
