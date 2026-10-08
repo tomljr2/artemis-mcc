@@ -3,7 +3,7 @@
 A checkpoint holds everything needed to rebuild the model without retraining:
   - the learned weights (the model's state_dict: every parameter tensor, by name),
   - the settings that define the model's shape (so we can rebuild an empty one first),
-  - the tokenizer's merges (so token ids can be turned back into text),
+  - the tokenizer: its splitting rule and merges (to turn text into ids and back),
   - a little bookkeeping: which step it came from and its validation loss.
 """
 
@@ -23,6 +23,7 @@ def save_checkpoint(
         {
             "model_args": model_args,
             "state_dict": model.state_dict(),
+            "pattern": tokenizer.pattern,
             # Plain lists of numbers, which the safe loader below accepts.
             "merges": [[a, b, new_id] for (a, b), new_id in tokenizer.merges.items()],
             "step": step,
@@ -40,5 +41,6 @@ def load_checkpoint(path: Path, device: str = "cpu") -> tuple[GPT, BPETokenizer,
     model = GPT(**ckpt["model_args"])  # an empty model of the right shape...
     model.load_state_dict(ckpt["state_dict"])  # ...filled with the trained weights
     model.to(device).eval()
-    tokenizer = BPETokenizer({(a, b): new_id for a, b, new_id in ckpt["merges"]})
+    merges = {(a, b): new_id for a, b, new_id in ckpt["merges"]}
+    tokenizer = BPETokenizer(merges, ckpt["pattern"])  # a missing rule fails, never guesses
     return model, tokenizer, {"step": ckpt["step"], "val_loss": ckpt["val_loss"]}

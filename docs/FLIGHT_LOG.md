@@ -588,3 +588,14 @@ val book 1.272. Header lines 0.965 (cleaned 1.972, noisy 1.275), spoken lines 1.
 **Anomalies:** A rerun of the diagnostic scored the older models with the new splitting
 rule and gave invalid numbers (2.869, 3.566); the figures above are from before the change.
 **Next:** Save the splitting rule inside the tokenizer file and checkpoints.
+
+## 2026-10-07 · Phase 1 · Stage 4 · Step 8: Save the splitting rule with the tokenizer
+**Objective:** Stop old tokenizers being silently read with a newer splitting rule.
+**What I did:** The tokenizer keeps its `pattern` and saves it next to the merges, in the
+tokenizer file and in checkpoints. Loading uses the saved rule; a file without one is
+refused. Stamped the existing local files with the rule each was trained with.
+**What I learned:** A tokenizer is the rule *and* the merges. Real tokenizer files store
+the pre-tokenizer for the same reason.
+**Measurements:** The diagnostic now reproduces the valid figures for the older models
+(header lines 1.275 and 1.972) with no special handling. 114 tests pass.
+**Next:** Add general English text (FineWeb-Edu).

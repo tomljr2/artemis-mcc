@@ -21,9 +21,9 @@ from pathlib import Path
 WORD_PATTERN = re.compile(r"'(?:s|t|re|ve|m|ll|d)| ?[^\W\d_]+| ?\d| ?(?:[^\s\w]|_)+|\s+(?!\S)|\s+")
 
 
-def split_words(text: str) -> list[str]:
+def split_words(text: str, pattern: str = WORD_PATTERN.pattern) -> list[str]:
     """'Houston, we' -> ['Houston', ',', ' we']. Joining the pieces gives back the text."""
-    return WORD_PATTERN.findall(text)
+    return re.findall(pattern, text)  # re keeps compiled patterns cached
 
 
 def pair_counts(ids: list[int]) -> Counter:
@@ -45,11 +45,13 @@ def merge(ids: list[int], pair: tuple[int, int], new_id: int) -> list[int]:
     return out
 
 
-def train_bpe(text: str, num_merges: int) -> dict[tuple[int, int], int]:
+def train_bpe(
+    text: str, num_merges: int, pattern: str = WORD_PATTERN.pattern
+) -> dict[tuple[int, int], int]:
     """Learn num_merges merges from text. Returns {pair: new token id}, in the order learned."""
     # Each distinct word once, with how often it occurs: " Houston" appears thousands of
     # times but is processed once per merge. That is what makes this fast.
-    words = {tuple(w.encode("utf-8")): n for w, n in Counter(split_words(text)).items()}
+    words = {tuple(w.encode("utf-8")): n for w, n in Counter(split_words(text, pattern)).items()}
     merges = {}
     for i in range(num_merges):
         counts = Counter()
@@ -66,10 +68,15 @@ def train_bpe(text: str, num_merges: int) -> dict[tuple[int, int], int]:
 
 
 class BPETokenizer:
-    """Text <-> token ids, using merges learned by train_bpe."""
+    """Text <-> token ids, using merges learned by train_bpe.
 
-    def __init__(self, merges: dict[tuple[int, int], int]):
+    A tokenizer is two things: the splitting rule (pattern) and the merges. The merges were
+    learned on pieces cut by that rule, so the two are always kept, saved and loaded together.
+    """
+
+    def __init__(self, merges: dict[tuple[int, int], int], pattern: str = WORD_PATTERN.pattern):
         self.merges = merges
+        self.pattern = pattern
         # What each id spells: the 256 single bytes, then each merge = its two halves joined.
         self.vocab = {i: bytes([i]) for i in range(256)}
         for (a, b), new_id in merges.items():
@@ -78,19 +85,24 @@ class BPETokenizer:
         self._cache: dict[str, list[int]] = {}  # each distinct word is encoded only once
 
     @classmethod
-    def train(cls, text: str, vocab_size: int) -> "BPETokenizer":
-        return cls(train_bpe(text, num_merges=vocab_size - 256))
+    def train(
+        cls, text: str, vocab_size: int, pattern: str = WORD_PATTERN.pattern
+    ) -> "BPETokenizer":
+        return cls(train_bpe(text, vocab_size - 256, pattern), pattern)
 
     def save(self, path: Path) -> None:
-        """The merges are the whole tokenizer: save them as a list, in the order learned."""
+        """Save the splitting rule, and the merges as a list in the order learned."""
         path.parent.mkdir(parents=True, exist_ok=True)
         merges = [[a, b, new_id] for (a, b), new_id in self.merges.items()]
-        path.write_text(json.dumps({"merges": merges}), encoding="utf-8")
+        path.write_text(json.dumps({"pattern": self.pattern, "merges": merges}), encoding="utf-8")
 
     @classmethod
     def load(cls, path: Path) -> "BPETokenizer":
-        merges = json.loads(path.read_text(encoding="utf-8"))["merges"]
-        return cls({(a, b): new_id for a, b, new_id in merges})
+        saved = json.loads(path.read_text(encoding="utf-8"))
+        if "pattern" not in saved:
+            # Guessing (e.g. today's default) could silently cut text unlike in training.
+            raise ValueError(f"{path} has no splitting rule ('pattern'); cannot load it safely")
+        return cls({(a, b): new_id for a, b, new_id in saved["merges"]}, saved["pattern"])
 
     def encode_word(self, word: str) -> list[int]:
         if word not in self._cache:
@@ -106,7 +118,7 @@ class BPETokenizer:
         return self._cache[word]
 
     def encode(self, text: str) -> list[int]:
-        return [i for word in split_words(text) for i in self.encode_word(word)]
+        return [i for word in split_words(text, self.pattern) for i in self.encode_word(word)]
 
     def decode(self, ids: list[int]) -> str:
         # errors="replace": a sequence the model invents may cut a character's bytes in half.

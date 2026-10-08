@@ -26,6 +26,7 @@ def test_the_tokenizer_travels_with_the_model(tmp_path):
     save_checkpoint(path, GPT(**MODEL_ARGS), MODEL_ARGS, TOKENIZER, step=0, val_loss=9.9)
     _, tok, _ = load_checkpoint(path)
     assert list(tok.merges.items()) == list(TOKENIZER.merges.items())
+    assert tok.pattern == TOKENIZER.pattern  # and the rule its merges were learned with
 
 
 def test_loaded_model_is_ready_for_generation(tmp_path):

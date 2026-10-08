@@ -1,3 +1,7 @@
+import json
+
+import pytest
+
 from pretrain.bpe import BPETokenizer, merge, pair_counts, split_words, train_bpe
 
 
@@ -88,3 +92,27 @@ def test_a_saved_tokenizer_loads_back_identical(tmp_path):
     assert list(loaded.merges) == list(tok.merges)  # same order: merges apply in order
     text = "Tranquility Base, Houston."
     assert loaded.encode(text) == tok.encode(text)
+
+
+# The rule before numbers were split into single digits: " ?\d+" keeps "04" in one piece.
+MULTI_DIGIT = r"'(?:s|t|re|ve|m|ll|d)| ?[^\W\d_]+| ?\d+| ?(?:[^\s\w]|_)+|\s+(?!\S)|\s+"
+
+
+def test_a_tokenizer_keeps_its_own_splitting_rule_through_save_and_load(tmp_path):
+    # Merges only make sense with the rule they were learned with. A tokenizer trained with
+    # another rule must keep using it after loading, whatever the code's default is now.
+    tok = BPETokenizer.train("04 03 29 CC\n" * 50, vocab_size=300, pattern=MULTI_DIGIT)
+    assert len(tok.encode("04")) == 1  # "04" was learned as one token
+    path = tmp_path / "tokenizer.json"
+    tok.save(path)
+    loaded = BPETokenizer.load(path)
+    assert loaded.pattern == MULTI_DIGIT
+    assert loaded.encode("04 03 29") == tok.encode("04 03 29")
+
+
+def test_a_tokenizer_file_without_a_splitting_rule_is_refused(tmp_path):
+    # Better to fail loudly than to guess the rule and quietly cut text the wrong way.
+    path = tmp_path / "tokenizer.json"
+    path.write_text(json.dumps({"merges": [[97, 98, 256]]}), encoding="utf-8")
+    with pytest.raises(ValueError, match="splitting rule"):
+        BPETokenizer.load(path)
