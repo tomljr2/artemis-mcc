@@ -667,3 +667,19 @@ web text, worse on the transcript. For our goal (NASA text) the NASA-only tokeni
 1.048 / 1.121 / 1.148; mixed 1.074 / 1.125 / 1.139.
 **Anomalies:** None. Both runs used the same seed, data and settings.
 **Next:** A bigger vocabulary, so NASA and general words both fit.
+
+## 2026-10-08 · Phase 1 · Stage 4 · Step 13: A bigger vocabulary (4,096 tokens)
+**Objective:** Give NASA and general English words room to both fit in the vocabulary.
+**What I did:** `train_tokenizer.py --vocab-size` (file names now say the size). Trained
+a 4,096-token tokenizer on the same NASA + web sample (28 minutes), then `gpt-11m` for
+10,000 steps at 25% NASA with it.
+**What I learned:** With 3,840 learned tokens both sets fit: " spacecraft", " CDR",
+"Houston", "EAGLE" and " because", " information" are all single tokens. Every
+validation set improved by a lot. But three things changed at once: the vocabulary, the
+parameter count (11.4M -> 13.8M: bigger input table and output layer), and the
+characters per 64-token window (~1.4x more context and more text per step).
+**Measurements:** chars per token (1,024 NASA-only -> 4,096 mix): transcript 2.19 ->
+2.64, book 2.62 -> 3.61, web 2.40 -> 3.47. Model, val transcript / book / web:
+1.048 / 1.121 / 1.148 -> 0.989 / 1.082 / 1.080. 7% slower per step.
+**Anomalies:** The improvement cannot yet be split between vocabulary and longer context.
+**Next:** A control run: the old tokenizer with a longer window, to separate the two.

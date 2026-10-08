@@ -81,6 +81,8 @@ CONFIGS["gpt-11m"] = {
     # 50% 1.042 / 1.145. Use --nasa-weight 0.25 with this config.
     # Tokenizer learned from NASA + web (--tokenizer checkpoints/tokenizer_1024_mix.json),
     # 25%: 1.074 / 1.125, web 1.139 (NASA-only tokenizer: 1.048 / 1.121, web 1.148).
+    # Vocabulary 4,096 learned from NASA + web (tokenizer_4096_mix.json), 13.8M parameters:
+    # 0.989 / 1.082, web 1.080. Also sees ~1.5x more characters per window and per step.
 }
 EVAL_INTERVAL = 500  # report losses every this many steps
 EVAL_BATCHES = 100  # batches averaged per loss report

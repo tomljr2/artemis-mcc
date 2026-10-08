@@ -4,6 +4,7 @@ Trained on the training split only: the held-out book, transcript tail and web d
 stay unseen.
 Run:  python -m pretrain.train_tokenizer                 NASA text only (~2 minutes)
       python -m pretrain.train_tokenizer --web           NASA + web text
+      python -m pretrain.train_tokenizer --web --vocab-size 4096
 """
 
 import argparse
@@ -12,15 +13,19 @@ from pathlib import Path
 
 from pretrain.bpe import BPETokenizer
 from pretrain.dataset import make_splits
-from pretrain.train import BOOKS_DIR, TEXT_PATH, TOKENIZER_PATH, VAL_BOOKS, WEB_DIR
+from pretrain.train import BOOKS_DIR, TEXT_PATH, VAL_BOOKS, WEB_DIR
 
-# 1,024 tokens: 256 bytes + 768 merges. Small on purpose: every token gets a row in the
-# model's input table and its output layer, and our model is small.
+# 1,024 tokens by default: 256 bytes + 768 merges. Small on purpose: every token gets a row
+# in the model's input table and its output layer, and our first model was small.
 VOCAB_SIZE = 1024
 # With --web: NASA's share of the characters the tokenizer learns from. Matches the share of
 # training windows that works best for the 11M model, so the vocabulary fits what it reads.
 NASA_SHARE = 0.25
-MIXED_TOKENIZER_PATH = Path("checkpoints/tokenizer_1024_mix.json")
+
+
+def tokenizer_path(vocab_size: int, web: bool) -> Path:
+    """Where a tokenizer is saved: the name says its size and what it learned from."""
+    return Path(f"checkpoints/tokenizer_{vocab_size}{'_mix' if web else ''}.json")
 
 
 def mixed_sample(nasa: str, web: str, nasa_share: float) -> str:
@@ -35,17 +40,16 @@ def mixed_sample(nasa: str, web: str, nasa_share: float) -> str:
     return nasa + "\n\n" + (web if end == -1 else web[:end])
 
 
-def main(web: bool) -> None:
+def main(web: bool, vocab_size: int) -> None:
     transcript = TEXT_PATH.read_text(encoding="utf-8")
     books = {p.stem: p.read_text(encoding="utf-8") for p in sorted(BOOKS_DIR.glob("*.txt"))}
     train_text, _ = make_splits(transcript, books, VAL_BOOKS)
-    path = TOKENIZER_PATH
     if web:
         web_text = (WEB_DIR / "train.txt").read_text(encoding="utf-8")
         train_text = mixed_sample(train_text, web_text, NASA_SHARE)
-        path = MIXED_TOKENIZER_PATH
     start = time.perf_counter()
-    tok = BPETokenizer.train(train_text, VOCAB_SIZE)
+    tok = BPETokenizer.train(train_text, vocab_size)
+    path = tokenizer_path(vocab_size, web)
     tok.save(path)
     n_tokens = len(tok.encode(train_text))
     print(f"vocab {tok.vocab_size:,}, trained in {time.perf_counter() - start:.0f}s")
@@ -59,4 +63,6 @@ def main(web: bool) -> None:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--web", action="store_true", help="learn from NASA + web text")
-    main(parser.parse_args().web)
+    parser.add_argument("--vocab-size", type=int, default=VOCAB_SIZE)
+    args = parser.parse_args()
+    main(args.web, args.vocab_size)
