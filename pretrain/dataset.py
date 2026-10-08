@@ -31,7 +31,8 @@ def get_batch(
     starts = torch.randint(len(data) - block_size, (batch_size,))
     x = torch.stack([data[i : i + block_size] for i in starts])
     y = torch.stack([data[i + 1 : i + block_size + 1] for i in starts])
-    return x.to(device), y.to(device)
+    # .long(): token ids may be stored compactly (2 bytes each); the model needs int64.
+    return x.to(device).long(), y.to(device).long()
 
 
 def make_splits(
@@ -51,3 +52,33 @@ def make_splits(
         "val book": "\n\n".join(books[name] for name in sorted(val_books)),
     }
     return train, val
+
+
+def natural_weights(sources: dict[str, torch.Tensor]) -> dict[str, float]:
+    """Each source's share of all the tokens: what plain concatenation would give."""
+    total = sum(len(data) for data in sources.values())
+    return {name: len(data) / total for name, data in sources.items()}
+
+
+def get_mixed_batch(
+    sources: dict[str, torch.Tensor],
+    weights: dict[str, float],
+    block_size: int,
+    batch_size: int,
+    device: str = "cpu",
+) -> tuple[torch.Tensor, torch.Tensor]:
+    """Like get_batch, but each window first picks its source, with these probabilities.
+
+    This is a data mixture: the weights decide how much of training each source gets,
+    whatever its size. A small source with a big weight is seen many times over.
+    """
+    names = list(sources)
+    probs = torch.tensor([weights[name] for name in names], dtype=torch.float)
+    picks = torch.multinomial(probs, batch_size, replacement=True)  # a source per window
+    counts = torch.bincount(picks, minlength=len(names)).tolist()
+    parts = [
+        get_batch(sources[name], block_size, n, device)
+        for name, n in zip(names, counts, strict=True)
+        if n > 0
+    ]
+    return torch.cat([x for x, _ in parts]), torch.cat([y for _, y in parts])

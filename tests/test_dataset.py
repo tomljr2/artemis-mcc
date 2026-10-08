@@ -1,6 +1,12 @@
 import torch
 
-from pretrain.dataset import get_batch, make_splits, train_val_split
+from pretrain.dataset import (
+    get_batch,
+    get_mixed_batch,
+    make_splits,
+    natural_weights,
+    train_val_split,
+)
 
 
 def test_split_sizes_follow_the_fraction():
@@ -50,3 +56,30 @@ def test_the_end_of_the_transcript_is_held_out_as_before():
     assert val["val transcript"] == "y" * 10
     assert "y" not in train
     assert "x" * 90 in train
+
+
+def test_batches_from_compact_storage_come_out_as_long_ids():
+    # Token ids are stored in 2 bytes each to save memory; the model's lookup table needs
+    # ordinary 8-byte integers.
+    x, y = get_batch(torch.arange(100, dtype=torch.int16), block_size=8, batch_size=4)
+    assert x.dtype == y.dtype == torch.long
+
+
+def test_a_mixed_batch_takes_every_window_from_a_source_with_all_the_weight():
+    sources = {"nasa": torch.full((100,), 1), "web": torch.full((100,), 2)}
+    x, y = get_mixed_batch(sources, {"nasa": 1.0, "web": 0.0}, block_size=8, batch_size=16)
+    assert x.shape == y.shape == (16, 8)
+    assert (x == 1).all()
+
+
+def test_a_mixed_batch_follows_the_weights():
+    torch.manual_seed(0)
+    sources = {"nasa": torch.full((100,), 1), "web": torch.full((100,), 2)}
+    x, _ = get_mixed_batch(sources, {"nasa": 0.25, "web": 0.75}, block_size=4, batch_size=4000)
+    nasa_share = (x[:, 0] == 1).float().mean().item()
+    assert abs(nasa_share - 0.25) < 0.03
+
+
+def test_natural_weights_follow_each_sources_size():
+    sources = {"nasa": torch.zeros(100), "web": torch.zeros(300)}
+    assert natural_weights(sources) == {"nasa": 0.25, "web": 0.75}

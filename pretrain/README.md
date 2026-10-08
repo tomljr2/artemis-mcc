@@ -46,5 +46,6 @@ reviewed, and committed with a Flight Log entry before the next one starts.
 
 **Stage 4: real training**
 - [ ] Warmup + cosine or WSD schedule, gradient clipping, checkpoints, eval loss.
+- [x] Mix in FineWeb-Edu general text: `data/prepare_fineweb_edu.py`, `train.py --web`.
 - [ ] Reproduce a small nanochat run, swap in your model, match its loss curve.
 - [ ] Final mixed general + NASA run in the cloud. Publish curves. Tag `artemis-i`.

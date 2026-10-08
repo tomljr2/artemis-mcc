@@ -6,7 +6,9 @@ Run from the repo root:  python -m pretrain.train --model gpt     (or --model bi
 
 import argparse
 import math
+import re
 import time
+from array import array
 from pathlib import Path
 
 import torch
@@ -15,12 +17,13 @@ from torch import nn
 from pretrain.bigram import BigramModel
 from pretrain.bpe import BPETokenizer
 from pretrain.checkpoint import save_checkpoint
-from pretrain.dataset import get_batch, make_splits
+from pretrain.dataset import get_batch, get_mixed_batch, make_splits, natural_weights
 from pretrain.gpt import GPT
 
 TEXT_PATH = Path("data/processed/apollo11_tec.txt")
 BOOKS_DIR = Path("data/processed/nasa_books")  # made by: python -m data.prepare_nasa_books
 VAL_BOOKS = {"sp-350"}  # Apollo Expeditions to the Moon: held out whole, never trained on
+WEB_DIR = Path("data/processed/fineweb_edu")  # made by: python -m data.prepare_fineweb_edu
 TOKENIZER_PATH = Path("checkpoints/tokenizer_1024.json")  # python -m pretrain.train_tokenizer
 CHECKPOINT_PATH = Path("checkpoints/gpt_nasa.pt")  # git-ignored
 
@@ -58,6 +61,9 @@ CONFIGS = {
         # + warmup/cosine schedule: 1.174 / 1.276 (a tie; train fit improved more).
         # Cleaned books: 1.252 / 1.277. + single-digit numbers in the tokenizer:
         # 1.120 / 1.272 (timestamps are now cut consistently).
+        # + FineWeb-Edu web text (--web), 40,000 steps, by NASA share of training windows:
+        # natural 1.1% -> 1.365 / 1.302, 20% -> 1.165 / 1.206, 50% -> 1.095 / 1.188,
+        # 80% -> 1.087 / 1.204. 50%, 300,000 steps: 1.054 / 1.154 (model-limited now).
     },
 }
 EVAL_INTERVAL = 500  # report losses every this many steps
@@ -114,6 +120,18 @@ def learning_rate(
     return min_lr + (max_lr - min_lr) * 0.5 * (1 + math.cos(math.pi * progress))
 
 
+def encode_to_tensor(tok: BPETokenizer, text: str) -> torch.Tensor:
+    """tok.encode(text), but stored in 2 bytes per token instead of a Python list.
+
+    For hundreds of millions of characters, a list of ids would take several GB: each id is
+    a full Python object. A vocabulary of 1,024 fits easily in a 2-byte integer.
+    """
+    ids = array("h")  # signed 2-byte integers: up to 32,767
+    for match in re.finditer(tok.pattern, text):  # one word-like piece at a time
+        ids.extend(tok.encode_word(match.group()))
+    return torch.frombuffer(ids, dtype=torch.int16).clone()  # clone: own the memory
+
+
 def loss_per_char(loss_per_token: float, n_chars: int, n_tokens: int) -> float:
     """Convert a per-token loss to per-character, so tokenizers can be compared fairly.
 
@@ -145,23 +163,42 @@ def estimate_loss(
     return losses
 
 
-def main(model_name: str) -> None:
+def main(
+    model_name: str,
+    web: bool = False,
+    nasa_weight: float | None = None,
+    max_steps: int | None = None,
+    checkpoint_path: Path = CHECKPOINT_PATH,
+) -> None:
     cfg = CONFIGS[model_name]
+    if max_steps is not None:
+        cfg = {**cfg, "max_steps": max_steps}
     torch.manual_seed(11)
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
     transcript = TEXT_PATH.read_text(encoding="utf-8")
     books = {p.stem: p.read_text(encoding="utf-8") for p in sorted(BOOKS_DIR.glob("*.txt"))}
     train_text, val_texts = make_splits(transcript, books, VAL_BOOKS)
-    tok = BPETokenizer.load(TOKENIZER_PATH)
     texts = {"train": train_text, **val_texts}
-    splits = {
-        name: torch.tensor(tok.encode(text), dtype=torch.long) for name, text in texts.items()
-    }
+    if web:  # general English: its own training text, and its own held-out documents
+        texts["train web"] = (WEB_DIR / "train.txt").read_text(encoding="utf-8")
+        texts["val web"] = (WEB_DIR / "val.txt").read_text(encoding="utf-8")
+    tok = BPETokenizer.load(TOKENIZER_PATH)
+    splits = {name: encode_to_tensor(tok, text) for name, text in texts.items()}
+    n_chars = {name: len(text) for name, text in texts.items()}
+    del texts  # hundreds of MB of text no longer needed: the token ids are what we train on
     for name, data in splits.items():
-        print(f"{name}: {len(texts[name]):,} characters -> {len(data):,} tokens")
+        print(f"{name}: {n_chars[name]:,} characters -> {len(data):,} tokens")
     print("losses below are per character, to compare with the character-level model")
-    train_data = splits["train"]
+
+    sources = {"nasa": splits["train"]}
+    if web:
+        sources["web"] = splits["train web"]
+    if nasa_weight is None:
+        weights = natural_weights(sources)  # each source in proportion to its size
+    else:
+        weights = {"nasa": nasa_weight, "web": 1 - nasa_weight}
+    print("training mixture: " + ", ".join(f"{n} {w:.1%}" for n, w in weights.items()))
 
     if model_name == "bigram":
         model = BigramModel(tok.vocab_size)
@@ -187,23 +224,23 @@ def main(model_name: str) -> None:
         if step % EVAL_INTERVAL == 0:
             losses = estimate_loss(model, splits, block_size, batch_size, EVAL_BATCHES, device)
             losses = {
-                name: loss_per_char(loss, len(texts[name]), len(splits[name]))
+                name: loss_per_char(loss, n_chars[name], len(splits[name]))
                 for name, loss in losses.items()
             }
-            # One number to pick the best model by: the average of the two validation sets.
-            losses["val"] = (losses["val transcript"] + losses["val book"]) / 2
             print(
-                f"step {step:5d} | train {losses['train']:.3f}"
-                f" | val transcript {losses['val transcript']:.3f}"
-                f" | val book {losses['val book']:.3f}"
-                f" | {time.perf_counter() - start_time:5.0f}s"
+                f"step {step:5d} | "
+                + " | ".join(f"{name} {loss:.3f}" for name, loss in losses.items())
+                + f" | {time.perf_counter() - start_time:5.0f}s"
             )
+            # One number to pick the best model by: the average of the two NASA validation
+            # sets. NASA text is the goal; the web text is there to help with it.
+            val = (losses["val transcript"] + losses["val book"]) / 2
             # Keep the best model seen so far, not just the last one: if training starts to
             # overfit, the saved copy is still the version that did best on unseen text.
-            if model_name == "gpt" and losses["val"] < best_val_loss:
-                best_val_loss = losses["val"]
-                save_checkpoint(CHECKPOINT_PATH, model, gpt_args, tok, step, best_val_loss)
-                print(f"           saved new best to {CHECKPOINT_PATH}")
+            if model_name == "gpt" and val < best_val_loss:
+                best_val_loss = val
+                save_checkpoint(checkpoint_path, model, gpt_args, tok, step, best_val_loss)
+                print(f"           saved new best to {checkpoint_path}")
         if step < cfg["max_steps"]:
             lr = learning_rate(
                 step,
@@ -214,7 +251,7 @@ def main(model_name: str) -> None:
             )
             for group in optimizer.param_groups:  # AdamW reads its step size from here
                 group["lr"] = lr
-            x, y = get_batch(train_data, block_size, batch_size, device)
+            x, y = get_mixed_batch(sources, weights, block_size, batch_size, device)
             train_step(model, optimizer, x, y, cfg.get("max_grad_norm"))
 
     # Let it write: start from a newline and sample 500 tokens. eval() switches dropout
@@ -228,4 +265,13 @@ def main(model_name: str) -> None:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--model", choices=CONFIGS, default="gpt")
-    main(parser.parse_args().model)
+    parser.add_argument("--web", action="store_true", help="also train on FineWeb-Edu text")
+    parser.add_argument(
+        "--nasa-weight",
+        type=float,
+        help="share of training windows from NASA text with --web (default: in proportion to size)",
+    )
+    parser.add_argument("--max-steps", type=int, help="override the config's max_steps")
+    parser.add_argument("--checkpoint", type=Path, default=CHECKPOINT_PATH)
+    args = parser.parse_args()
+    main(args.model, args.web, args.nasa_weight, args.max_steps, args.checkpoint)

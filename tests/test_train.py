@@ -4,9 +4,11 @@ import torch
 from torch import nn
 
 from pretrain.bigram import BigramModel
+from pretrain.bpe import BPETokenizer
 from pretrain.gpt import GPT
 from pretrain.train import (
     clip_gradients,
+    encode_to_tensor,
     estimate_loss,
     learning_rate,
     loss_per_char,
@@ -124,3 +126,11 @@ def test_train_step_clips_the_gradients_it_steps_with():
     # The gradients used by the step are still attached to the parameters afterwards.
     norm = torch.sqrt(sum((p.grad**2).sum() for p in model.parameters()))
     assert norm <= 0.01 + 1e-6
+
+
+def test_encoding_into_compact_storage_gives_the_same_ids():
+    tok = BPETokenizer.train("Houston, Tranquility Base here. 04 03 29\n" * 20, vocab_size=300)
+    text = "Tranquility Base, Houston.\n\n04 03 29 CDR We're GO, café."
+    ids = encode_to_tensor(tok, text)
+    assert ids.dtype == torch.int16  # 2 bytes per token instead of 8
+    assert ids.tolist() == tok.encode(text)

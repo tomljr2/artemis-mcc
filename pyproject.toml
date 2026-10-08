@@ -18,7 +18,7 @@ dependencies = [
 
 [project.optional-dependencies]
 pretrain = ["certifi", "tiktoken", "datasets", "matplotlib"]
-data = ["certifi", "requests", "datasketch", "pypdf"]
+data = ["certifi", "requests", "datasketch", "pypdf", "pyarrow"]
 dev = ["pytest", "ruff"]
 
 [tool.setuptools]

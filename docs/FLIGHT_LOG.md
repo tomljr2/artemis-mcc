@@ -599,3 +599,23 @@ the pre-tokenizer for the same reason.
 **Measurements:** The diagnostic now reproduces the valid figures for the older models
 (header lines 1.275 and 1.972) with no special handling. 114 tests pass.
 **Next:** Add general English text (FineWeb-Edu).
+
+## 2026-10-08 · Phase 1 · Stage 4 · Step 9: Mix in general English (FineWeb-Edu)
+**Objective:** Give the model far more text to learn English from, without losing NASA.
+**What I did:** `data/prepare_fineweb_edu.py` takes one FineWeb-Edu file (license: ODC-By,
+logged), keeps ASCII-only documents (78%), and holds out every 100th document: 327M
+training characters (~87x our NASA text). Training samples each window from NASA or web
+text with chosen weights (`get_mixed_batch`); tokens are stored in 2 bytes each. Tokenizer
+and model unchanged, so only the data differs.
+**What I learned:** The mixture matters more than the amount. Plain concatenation gives
+NASA 1.1% of training and makes NASA text worse. Giving NASA half the windows makes both
+NASA validation sets better than NASA-only: general English helps, and the web text
+stops the model memorizing the small NASA set.
+**Measurements:** 40,000 steps, val transcript / val book (NASA-only: 1.120 / 1.272):
+natural 1.365 / 1.302; 20% 1.165 / 1.206; 50% 1.095 / 1.188; 80% 1.087 / 1.204.
+50% for 300,000 steps (3.6 h): best 1.054 / 1.154 at step 287,000; web val 1.236 with
+train web 1.231. Curves: `docs/curves/web_mixtures.png`, `docs/curves/web_nasa50_300k.png`.
+**Anomalies:** 7.5x more steps bought only ~0.04, and train and val web loss are equal:
+the 1M-parameter model, not the data, is now the limit. Documents are joined with blank
+lines, no end-of-document marker. The tokenizer was trained on NASA text only.
+**Next:** Scale the model up now that there is data to support it.
