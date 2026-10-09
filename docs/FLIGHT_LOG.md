@@ -824,3 +824,18 @@ is built and trained, not how far it sees. 256 stays the default.
 (256 tokens: 0.917 / 1.072 / 1.009). Whole web val 1.412 bits per byte (256 tokens:
 1.423; nanochat: 1.199). 85 min (256 tokens: 57 min). 157 tests pass.
 **Next:** nanochat's optimizer, Muon, the biggest remaining difference in training.
+
+## 2026-10-09 · Phase 1 · Stage 4 · Step 22: Add the Muon optimizer
+**Objective:** Build nanochat's optimizer for weight grids, on its own, before using it.
+**What I did:** Added `pretrain/muon.py`: `orthogonalize` (five rounds of a Newton-Schulz
+polynomial that evens out the strength of every direction in a matrix) and `Muon` (Nesterov
+momentum, then orthogonalize, with a size scale for tall grids). The original version,
+without nanochat's later refinements. Not wired into training yet.
+**What I learned:** A gradient's directions can differ a lot in strength; plain momentum
+mostly moves the strong ones. Muon keeps the directions but steps equally along all of
+them, using only matrix multiplications (fast on a GPU), no SVD.
+**Measurements:** a gradient with direction strengths from 1 to 10 comes out with all of
+them between 0.68 and 1.13, for square, wide and tall shapes. Muon fits a 16x16 linear map
+to under 5% of its starting loss in 200 steps. 163 tests pass.
+**Next:** Train with Muon for the transformer's weight grids and AdamW for the rest, and
+compare against the 256-token default (1.423 bits per byte).
