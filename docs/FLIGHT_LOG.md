@@ -763,3 +763,36 @@ documents: 1.56 bits per byte.
 each val document (and only the first ~524K tokens of val), while we score random
 64-token windows from anywhere in the text.
 **Next:** One scoring script that grades both models on the whole val text the same way.
+
+## 2026-10-09 · Phase 1 · Stage 4 · Step 19: Grade every model the same way
+**Objective:** One exact score for any model, ours or nanochat's, on the whole web val text.
+**What I did:** Added `pretrain/score_bpb.py`. It scores all 860 val documents, every token
+exactly once, each document from its own start marker (ours: a blank line; nanochat's:
+`<|bos|>`), reading long documents in windows that overlap by half. It reports bits per
+byte, which doesn't depend on the tokenizer. `--context` shows a model fewer tokens than it
+was trained on. It runs in nanochat's venv too, so nanochat's own code loads its models.
+**What I learned:** Context explains most of the gap. nanochat, limited to 47 tokens
+(about the 222 bytes our 64 tokens cover), scores 1.577: worse than ours. With more context
+it improves steadily, down to 1.199 at 512. Our run with 256 tokens also beat our 64-token
+run clearly. Longer windows also mean NASA text is reread faster: NASA val got worse after
+step 6,000 while web val kept improving to the end.
+**Measurements:** bits per byte on the whole web val text:
+
+| Model | Context | Bits per byte |
+|---|---|---|
+| ours, vocab 1,024, 10k steps | 64 tokens | 1.613 |
+| ours, vocab 1,024, 10k steps | 96 tokens | 1.566 |
+| ours, vocab 4,096, 10k steps | 64 tokens | 1.522 |
+| ours, vocab 4,096, best NASA checkpoint (step 6,000 of 40,000) | 256 tokens | 1.438 |
+| nanochat, trained on our data, limited | 47 / 64 / 128 / 256 tokens | 1.577 / 1.480 / 1.325 / 1.242 |
+| nanochat, trained on ClimbMix | 512 tokens | 1.215 |
+| nanochat, trained on our data | 512 tokens | 1.199 |
+
+The 1M model after 300k steps: 1.744. The 256-token run: 6.1 h; its web val reached 0.955
+nats per character (about 1.38 bits per byte on random windows) at step 40,000, but that
+checkpoint wasn't kept.
+**Anomalies:** I meant the 256-token run to be 10,000 steps but forgot `--max-steps`, so it
+ran the config's 40,000 and saved the checkpoint best on NASA val, not web. Renamed it
+`gpt_11m_nasa25_block256_40k_best6k.pt`. Scoring nanochat at short contexts is a little
+unfair to it: it always trained with `<|bos|>` in view, which mid-document windows lack.
+**Next:** Lengthen our context for real, and keep the NASA share from being memorized.
