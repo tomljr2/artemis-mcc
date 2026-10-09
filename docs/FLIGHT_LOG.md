@@ -810,3 +810,17 @@ character (64-token recipe, 10,000 steps: 0.989 / 1.082 / 1.080). Whole web val:
 bits per byte (was 1.522; nanochat 1.199). 57 min (was 24 min). 156 tests pass.
 **Next:** The remaining gap to nanochat at 512 tokens: try 512 tokens, then look at its
 optimizer (Muon) and its bigger vocabulary.
+
+## 2026-10-09 · Phase 1 · Stage 4 · Step 21: Try nanochat's 512-token context
+**Objective:** Find how much of the remaining gap to nanochat is still context.
+**What I did:** Added `train.py --batch-size`, and `recipe()`, which applies any given
+options over a config (tested). Ran 512-token windows with 32 per step, so the same
+16,384 tokens per step as the default, and scored the result.
+**What I learned:** Little. Doubling the context again gained 0.011 bits per byte, at 1.5x
+the time. At this size, our model gets most of what context gives by 256 tokens; nanochat
+gained more (1.242 to 1.199) over the same step. The rest of the gap is in how the model
+is built and trained, not how far it sees. 256 stays the default.
+**Measurements:** best at step 5,500: val transcript / book / web 0.909 / 1.069 / 0.995
+(256 tokens: 0.917 / 1.072 / 1.009). Whole web val 1.412 bits per byte (256 tokens:
+1.423; nanochat: 1.199). 85 min (256 tokens: 57 min). 157 tests pass.
+**Next:** nanochat's optimizer, Muon, the biggest remaining difference in training.

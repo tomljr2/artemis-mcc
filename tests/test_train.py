@@ -16,6 +16,7 @@ from pretrain.train import (
     learning_rate,
     loss_per_char,
     parse_args,
+    recipe,
     train_step,
 )
 
@@ -174,6 +175,13 @@ def test_the_11m_recipe_reads_long_windows_but_stops_before_memorizing_nasa():
     assert cfg["block_size"] == 256
     assert cfg["block_size"] * cfg["batch_size"] == 16_384  # tokens per step, as nanochat
     assert cfg["max_steps"] == 6000  # NASA val was best here in the 40,000-step run
+
+
+def test_options_override_the_recipe_and_leave_the_rest():
+    cfg = recipe("gpt-11m", block_size=512, batch_size=32, max_steps=None)
+    assert (cfg["block_size"], cfg["batch_size"]) == (512, 32)
+    assert cfg["max_steps"] == CONFIGS["gpt-11m"]["max_steps"]  # None: not overridden
+    assert CONFIGS["gpt-11m"]["block_size"] == 256  # the recipe itself is unchanged
 
 
 def test_earlier_recipes_can_still_be_reproduced():

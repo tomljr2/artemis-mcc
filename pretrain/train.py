@@ -96,6 +96,8 @@ CONFIGS["gpt-11m"] = {
     "max_steps": 6000,  # 16,384 tokens per step, like nanochat; stop before memorizing NASA
     # This recipe: best at step 5,500, 0.917 / 1.072, web 1.009; whole web val 1.423 bits
     # per byte (64 tokens, 10,000 steps: 1.522; nanochat at 512 tokens: 1.199). 57 min.
+    # --block-size 512 --batch-size 32 (same tokens per step): 0.909 / 1.069, web 0.995;
+    # 1.412 bits per byte, but 85 min. Little gain for 1.5x the time, so 256 stays.
 }
 EVAL_INTERVAL = 500  # report losses every this many steps
 EVAL_BATCHES = 100  # batches averaged per loss report
@@ -194,6 +196,14 @@ def estimate_loss(
     return losses
 
 
+def recipe(model_name: str, **overrides: int | None) -> dict:
+    """The named config, with any options that were given (not None) replacing its values.
+
+    (block_size can be anything: RoPE has no table of positions to outgrow.)
+    """
+    return {**CONFIGS[model_name], **{k: v for k, v in overrides.items() if v is not None}}
+
+
 def main(
     model_name: str,
     web: bool = True,
@@ -202,12 +212,9 @@ def main(
     checkpoint_path: Path = CHECKPOINT_PATH,
     tokenizer_path: Path = TOKENIZER_PATH,
     block_size: int | None = None,
+    batch_size: int | None = None,
 ) -> None:
-    cfg = CONFIGS[model_name]
-    if max_steps is not None:
-        cfg = {**cfg, "max_steps": max_steps}
-    if block_size is not None:  # RoPE has no position table, so any length works
-        cfg = {**cfg, "block_size": block_size}
+    cfg = recipe(model_name, max_steps=max_steps, block_size=block_size, batch_size=batch_size)
     torch.manual_seed(11)
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -314,6 +321,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     parser.add_argument("--max-steps", type=int, help="override the config's max_steps")
     parser.add_argument("--block-size", type=int, help="override the context length in tokens")
+    parser.add_argument("--batch-size", type=int, help="override the windows per step")
     parser.add_argument("--checkpoint", type=Path, default=CHECKPOINT_PATH)
     parser.add_argument("--tokenizer", type=Path, default=TOKENIZER_PATH)
     return parser.parse_args(argv)
@@ -329,4 +337,5 @@ if __name__ == "__main__":
         args.checkpoint,
         args.tokenizer,
         args.block_size,
+        args.batch_size,
     )
