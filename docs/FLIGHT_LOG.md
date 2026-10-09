@@ -746,3 +746,20 @@ character. 187 MB, exported in 2.4 min. nanochat's own reader returns the same f
 documents.
 **Next:** Train nanochat's tokenizer and model on these shards, and compare its val bits
 per byte with our web val directly.
+
+## 2026-10-08 · Phase 1 · Stage 4 · Step 18: Train nanochat on our data
+**Objective:** See how nanochat's small recipe scores on our FineWeb-Edu text.
+**What I did:** Trained nanochat's 32,768-token tokenizer on our train shards, then its same
+5,000-step recipe as Step 16, changing only the data (`NANOCHAT_BASE_DIR`).
+**What I learned:** Our text is about as hard for it as its own: the score barely moved
+(1.164 to 1.162). Its tokenizer trainer (Rust) took 13 s; ours (Python) took 28 min for
+4,096 tokens. nanochat starts every sequence at a document start and crops what doesn't
+fit, so at 512 tokens it mostly reads document beginnings, and it went through those
+about 2.5 times (passes began at steps 2,013 and 4,057) with no sign of memorizing.
+**Measurements:** val bits per byte 3.135 at step 0, 1.333 at 1,000, 1.196 at 3,000,
+1.162 at 5,000 (the minimum). 72.8 min, peak memory 3.9 GB. Ours on the same val
+documents: 1.56 bits per byte.
+**Anomalies:** Still not graded identically: nanochat scores the first 512 tokens of
+each val document (and only the first ~524K tokens of val), while we score random
+64-token windows from anywhere in the text.
+**Next:** One scoring script that grades both models on the whole val text the same way.
