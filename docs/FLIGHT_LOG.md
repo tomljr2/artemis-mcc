@@ -796,3 +796,17 @@ ran the config's 40,000 and saved the checkpoint best on NASA val, not web. Rena
 `gpt_11m_nasa25_block256_40k_best6k.pt`. Scoring nanochat at short contexts is a little
 unfair to it: it always trained with `<|bos|>` in view, which mid-document windows lack.
 **Next:** Lengthen our context for real, and keep the NASA share from being memorized.
+
+## 2026-10-09 · Phase 1 · Stage 4 · Step 20: Make the long context the default
+**Objective:** Use what the scorer found: give our model a longer view of the text.
+**What I did:** The `gpt-11m` recipe now reads 256-token windows (about 890 characters,
+was 64 tokens) for 6,000 steps: 16,384 tokens per step, the same as nanochat. Ran the plain
+default command and scored the result on the whole web val text.
+**What I learned:** Letting the learning rate wind down over the run's real length beats
+stopping a longer run partway: 1.423 here vs 1.438 for step 6,000 of the 40,000-step run.
+With 6,000 steps, NASA val was still about level at the end, no longer rising.
+**Measurements:** best at step 5,500: val transcript / book / web 0.917 / 1.072 / 1.009 per
+character (64-token recipe, 10,000 steps: 0.989 / 1.082 / 1.080). Whole web val: 1.423
+bits per byte (was 1.522; nanochat 1.199). 57 min (was 24 min). 156 tests pass.
+**Next:** The remaining gap to nanochat at 512 tokens: try 512 tokens, then look at its
+optimizer (Muon) and its bigger vocabulary.

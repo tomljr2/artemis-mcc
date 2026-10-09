@@ -169,6 +169,13 @@ def test_the_defaults_are_the_best_recipe_so_far():
     assert args.tokenizer == TOKENIZER_PATH == Path("checkpoints/tokenizer_4096_mix.json")
 
 
+def test_the_11m_recipe_reads_long_windows_but_stops_before_memorizing_nasa():
+    cfg = CONFIGS["gpt-11m"]
+    assert cfg["block_size"] == 256
+    assert cfg["block_size"] * cfg["batch_size"] == 16_384  # tokens per step, as nanochat
+    assert cfg["max_steps"] == 6000  # NASA val was best here in the 40,000-step run
+
+
 def test_earlier_recipes_can_still_be_reproduced():
     args = parse_args(
         ["--model", "gpt", "--no-web", "--tokenizer", "checkpoints/tokenizer_1024.json"]

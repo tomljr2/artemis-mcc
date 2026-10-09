@@ -89,6 +89,13 @@ CONFIGS["gpt-11m"] = {
     # 0.989 / 1.082, web 1.080. Also sees ~1.5x more characters per window and per step.
     # Control, 1,024 tokenizer with --block-size 96 (same characters per window):
     # 1.001 / 1.108, web 1.117, and 31% slower than the 4,096 run.
+    # Whole-val-text scores (pretrain/score_bpb.py) showed context is most of the gap to
+    # nanochat. --block-size 256, 40,000 steps: NASA val best at step 6,000 (0.934 / 1.088,
+    # web 1.021), then NASA is memorized (1.351 / 1.523 at 40,000) while web keeps falling.
+    "block_size": 256,  # tokens per window: ~890 characters with the 4,096 tokenizer
+    "max_steps": 6000,  # 16,384 tokens per step, like nanochat; stop before memorizing NASA
+    # This recipe: best at step 5,500, 0.917 / 1.072, web 1.009; whole web val 1.423 bits
+    # per byte (64 tokens, 10,000 steps: 1.522; nanochat at 512 tokens: 1.199). 57 min.
 }
 EVAL_INTERVAL = 500  # report losses every this many steps
 EVAL_BATCHES = 100  # batches averaged per loss report
