@@ -1,15 +1,18 @@
 import math
 from pathlib import Path
 
+import pytest
 import torch
 from torch import nn
 
 from pretrain.bigram import BigramModel
 from pretrain.bpe import BPETokenizer
 from pretrain.gpt import GPT
+from pretrain.muon import Muon
 from pretrain.train import (
     CONFIGS,
     TOKENIZER_PATH,
+    build_optimizer,
     clip_gradients,
     encode_to_tensor,
     estimate_loss,
@@ -17,6 +20,7 @@ from pretrain.train import (
     loss_per_char,
     parse_args,
     recipe,
+    set_learning_rate,
     train_step,
 )
 
@@ -190,3 +194,46 @@ def test_earlier_recipes_can_still_be_reproduced():
     )
     assert (args.model, args.web) == ("gpt", False)
     assert args.tokenizer == Path("checkpoints/tokenizer_1024.json")
+
+
+def tiny_gpt() -> GPT:
+    return GPT(vocab_size=20, block_size=16, n_embd=32, n_head=4, n_layer=2)
+
+
+def test_muon_gets_the_block_weight_grids_and_adamw_the_rest():
+    model = tiny_gpt()
+    opt = build_optimizer(model, learning_rate=1e-3, muon_lr=0.02)
+    adamw, muon = opt.optimizers
+    assert isinstance(adamw, torch.optim.AdamW) and isinstance(muon, Muon)
+    names = {id(p): n for n, p in model.named_parameters()}
+    in_muon = {names[id(p)] for g in muon.param_groups for p in g["params"]}
+    in_adamw = {names[id(p)] for g in adamw.param_groups for p in g["params"]}
+    assert "blocks.0.attention.query.weight" in in_muon
+    assert "blocks.1.mlp.down.weight" in in_muon
+    assert {"token_embedding.weight", "lm_head.weight", "ln_f.weight"} <= in_adamw
+    assert in_muon.isdisjoint(in_adamw) and in_muon | in_adamw == set(names.values())
+
+
+def test_without_muon_it_is_plain_adamw_on_everything():
+    model = tiny_gpt()
+    opt = build_optimizer(model, learning_rate=1e-3, muon_lr=None)
+    [adamw] = opt.optimizers
+    assert sum(len(g["params"]) for g in adamw.param_groups) == len(list(model.parameters()))
+
+
+def test_the_schedule_scales_each_optimizer_from_its_own_peak():
+    opt = build_optimizer(tiny_gpt(), learning_rate=1e-3, muon_lr=0.02)
+    set_learning_rate(opt, 0.5)  # halfway down the schedule
+    assert sorted(g["lr"] for g in opt.param_groups) == pytest.approx([5e-4, 0.01])
+
+
+def test_training_with_muon_lowers_the_loss_on_a_repeated_batch():
+    torch.manual_seed(0)
+    model = tiny_gpt()
+    opt = build_optimizer(model, learning_rate=1e-3, muon_lr=0.02)
+    x = torch.randint(0, 20, (4, 16))
+    y = torch.randint(0, 20, (4, 16))
+    first = train_step(model, opt, x, y)
+    for _ in range(50):
+        last = train_step(model, opt, x, y)
+    assert last < first / 2

@@ -21,6 +21,7 @@ from pretrain.bpe import BPETokenizer
 from pretrain.checkpoint import save_checkpoint
 from pretrain.dataset import get_batch, get_mixed_batch, make_splits, natural_weights
 from pretrain.gpt import GPT
+from pretrain.muon import Muon
 
 TEXT_PATH = Path("data/processed/apollo11_tec.txt")
 BOOKS_DIR = Path("data/processed/nasa_books")  # made by: python -m data.prepare_nasa_books
@@ -98,6 +99,8 @@ CONFIGS["gpt-11m"] = {
     # per byte (64 tokens, 10,000 steps: 1.522; nanochat at 512 tokens: 1.199). 57 min.
     # --block-size 512 --batch-size 32 (same tokens per step): 0.909 / 1.069, web 0.995;
     # 1.412 bits per byte, but 85 min. Little gain for 1.5x the time, so 256 stays.
+    # --muon-lr 0.02 (Muon for the blocks' weight grids): best at step 5,500, 0.891 / 1.045,
+    # web 0.986; 1.387 bits per byte, 67 min. Ahead from the first report on.
 }
 EVAL_INTERVAL = 500  # report losses every this many steps
 EVAL_BATCHES = 100  # batches averaged per loss report
@@ -153,6 +156,52 @@ def learning_rate(
     return min_lr + (max_lr - min_lr) * 0.5 * (1 + math.cos(math.pi * progress))
 
 
+class Optimizers:
+    """Several optimizers that step together, so the training loop can treat them as one."""
+
+    def __init__(self, *optimizers: torch.optim.Optimizer):
+        self.optimizers = optimizers
+
+    @property
+    def param_groups(self) -> list[dict]:
+        return [g for opt in self.optimizers for g in opt.param_groups]
+
+    def zero_grad(self) -> None:
+        for opt in self.optimizers:
+            opt.zero_grad()
+
+    def step(self) -> None:
+        for opt in self.optimizers:
+            opt.step()
+
+
+def build_optimizer(model: nn.Module, learning_rate: float, muon_lr: float | None) -> Optimizers:
+    """AdamW for everything; or, with muon_lr, Muon for the blocks' weight grids.
+
+    AdamW: gradient descent that also adapts the step size for each parameter. It keeps the
+    token table, the output layer and the norm weights either way.
+    """
+    muon_params = [
+        p
+        for n, p in model.named_parameters()
+        if muon_lr and n.startswith("blocks.") and p.dim() == 2
+    ]
+    ids = {id(p) for p in muon_params}
+    adamw = torch.optim.AdamW([p for p in model.parameters() if id(p) not in ids], lr=learning_rate)
+    adamw.param_groups[0]["peak_lr"] = learning_rate
+    if not muon_params:
+        return Optimizers(adamw)
+    muon = Muon(muon_params, lr=muon_lr)
+    muon.param_groups[0]["peak_lr"] = muon_lr
+    return Optimizers(adamw, muon)
+
+
+def set_learning_rate(optimizer: Optimizers, fraction: float) -> None:
+    """Set every group's step size to `fraction` of its own peak (the schedule's output)."""
+    for group in optimizer.param_groups:  # each optimizer reads its step size from here
+        group["lr"] = group["peak_lr"] * fraction
+
+
 def encode_to_tensor(tok: BPETokenizer, text: str) -> torch.Tensor:
     """tok.encode(text), but stored in 2 bytes per token instead of a Python list.
 
@@ -196,7 +245,7 @@ def estimate_loss(
     return losses
 
 
-def recipe(model_name: str, **overrides: int | None) -> dict:
+def recipe(model_name: str, **overrides: float | None) -> dict:
     """The named config, with any options that were given (not None) replacing its values.
 
     (block_size can be anything: RoPE has no table of positions to outgrow.)
@@ -213,8 +262,15 @@ def main(
     tokenizer_path: Path = TOKENIZER_PATH,
     block_size: int | None = None,
     batch_size: int | None = None,
+    muon_lr: float | None = None,
 ) -> None:
-    cfg = recipe(model_name, max_steps=max_steps, block_size=block_size, batch_size=batch_size)
+    cfg = recipe(
+        model_name,
+        max_steps=max_steps,
+        block_size=block_size,
+        batch_size=batch_size,
+        muon_lr=muon_lr,
+    )
     torch.manual_seed(11)
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -256,8 +312,7 @@ def main(
         model = GPT(**gpt_args)
     model = model.to(device)
     print(f"{model_name}: {sum(p.numel() for p in model.parameters()):,} parameters")
-    # AdamW: gradient descent that also adapts the step size for each parameter.
-    optimizer = torch.optim.AdamW(model.parameters(), lr=cfg["learning_rate"])
+    optimizer = build_optimizer(model, cfg["learning_rate"], cfg.get("muon_lr"))
 
     block_size, batch_size = cfg["block_size"], cfg["batch_size"]
     start_time = time.perf_counter()
@@ -291,8 +346,7 @@ def main(
                 cfg["warmup_steps"],
                 cfg["max_steps"],
             )
-            for group in optimizer.param_groups:  # AdamW reads its step size from here
-                group["lr"] = lr
+            set_learning_rate(optimizer, lr / cfg["learning_rate"])
             x, y = get_mixed_batch(sources, weights, block_size, batch_size, device)
             train_step(model, optimizer, x, y, cfg.get("max_grad_norm"))
 
@@ -322,6 +376,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--max-steps", type=int, help="override the config's max_steps")
     parser.add_argument("--block-size", type=int, help="override the context length in tokens")
     parser.add_argument("--batch-size", type=int, help="override the windows per step")
+    parser.add_argument(
+        "--muon-lr", type=float, help="train the blocks' weight grids with Muon at this peak"
+    )
     parser.add_argument("--checkpoint", type=Path, default=CHECKPOINT_PATH)
     parser.add_argument("--tokenizer", type=Path, default=TOKENIZER_PATH)
     return parser.parse_args(argv)
@@ -338,4 +395,5 @@ if __name__ == "__main__":
         args.tokenizer,
         args.block_size,
         args.batch_size,
+        args.muon_lr,
     )

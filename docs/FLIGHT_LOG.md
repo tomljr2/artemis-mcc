@@ -839,3 +839,18 @@ them between 0.68 and 1.13, for square, wide and tall shapes. Muon fits a 16x16 
 to under 5% of its starting loss in 200 steps. 163 tests pass.
 **Next:** Train with Muon for the transformer's weight grids and AdamW for the rest, and
 compare against the 256-token default (1.423 bits per byte).
+
+## 2026-10-09 · Phase 1 · Stage 4 · Step 23: Train with Muon
+**Objective:** Measure what nanochat's optimizer does for our model.
+**What I did:** `build_optimizer` gives the blocks' 36 weight grids to Muon and the rest
+(token table, output layer, norm weights) to AdamW; `Optimizers` steps both as one, and
+`set_learning_rate` scales each from its own peak. `--muon-lr` turns it on (off: training
+as before). Ran the default recipe with `--muon-lr 0.02` and scored it.
+**What I learned:** Muon was ahead at every report, from step 500 on, on all three texts.
+It beat doubling the context (1.412) for less extra time. Each step costs ~13% more for
+the orthogonalizing.
+**Measurements:** best at step 5,500: val transcript / book / web 0.891 / 1.045 / 0.986
+(AdamW only: 0.917 / 1.072 / 1.009). Whole web val 1.387 bits per byte (AdamW: 1.423;
+nanochat: 1.199). 67 min (AdamW: 57 min). 167 tests pass.
+**Anomalies:** One step size tried for Muon (0.02, the usual value); not tuned.
+**Next:** Make Muon part of the default recipe.
