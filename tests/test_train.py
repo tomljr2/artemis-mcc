@@ -188,6 +188,13 @@ def test_options_override_the_recipe_and_leave_the_rest():
     assert CONFIGS["gpt-11m"]["block_size"] == 256  # the recipe itself is unchanged
 
 
+def test_the_11m_recipe_trains_its_weight_grids_with_muon():
+    assert recipe("gpt-11m")["muon_lr"] == 0.02
+    # --muon-lr 0 switches back to AdamW for everything.
+    [adamw] = build_optimizer(tiny_gpt(), 1e-3, recipe("gpt-11m", muon_lr=0)["muon_lr"]).optimizers
+    assert isinstance(adamw, torch.optim.AdamW)
+
+
 def test_earlier_recipes_can_still_be_reproduced():
     args = parse_args(
         ["--model", "gpt", "--no-web", "--tokenizer", "checkpoints/tokenizer_1024.json"]

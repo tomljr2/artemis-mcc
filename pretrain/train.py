@@ -101,6 +101,12 @@ CONFIGS["gpt-11m"] = {
     # 1.412 bits per byte, but 85 min. Little gain for 1.5x the time, so 256 stays.
     # --muon-lr 0.02 (Muon for the blocks' weight grids): best at step 5,500, 0.891 / 1.045,
     # web 0.986; 1.387 bits per byte, 67 min. Ahead from the first report on.
+    # Muon step sizes, best checkpoint (NASA avg) / bits per byte: 0.01 -> 0.977 / 1.414 (at
+    # step 4,000), 0.02 -> 0.968 / 1.387, 0.04 -> 1.023 / 1.552 (stalls: steps too big).
+    # Vocabulary 8,192 (tokenizer_8192_mix.json, 16.9M parameters): 0.970 / 1.398 at step
+    # 4,000, then NASA is memorized sooner; web val at the end 0.964 (4,096: 0.982). 1.5x
+    # the time. A tie where it counts, so 4,096 stays until there is more NASA text.
+    "muon_lr": 0.02,  # peak step size for Muon (--muon-lr 0: AdamW for everything)
 }
 EVAL_INTERVAL = 500  # report losses every this many steps
 EVAL_BATCHES = 100  # batches averaged per loss report
@@ -377,7 +383,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--block-size", type=int, help="override the context length in tokens")
     parser.add_argument("--batch-size", type=int, help="override the windows per step")
     parser.add_argument(
-        "--muon-lr", type=float, help="train the blocks' weight grids with Muon at this peak"
+        "--muon-lr", type=float, help="Muon's peak step size for the blocks' grids (0: off)"
     )
     parser.add_argument("--checkpoint", type=Path, default=CHECKPOINT_PATH)
     parser.add_argument("--tokenizer", type=Path, default=TOKENIZER_PATH)

@@ -854,3 +854,32 @@ the orthogonalizing.
 nanochat: 1.199). 67 min (AdamW: 57 min). 167 tests pass.
 **Anomalies:** One step size tried for Muon (0.02, the usual value); not tuned.
 **Next:** Make Muon part of the default recipe.
+
+## 2026-10-09 · Phase 1 · Stage 4 · Step 24: Make Muon the default
+**Objective:** Plain `python -m pretrain.train` should use the best recipe measured.
+**What I did:** The `gpt-11m` recipe now sets `muon_lr` 0.02; `--muon-lr 0` switches back
+to AdamW for everything. Older recipes (e.g. `--model gpt`) still train with AdamW only.
+**What I learned:** A default is a promise that the combination was measured: this one
+was, in Step 23 (1.387 bits per byte vs 1.423).
+**Measurements:** 168 tests pass. No new run: the Step 23 run is this exact recipe.
+**Next:** Remaining gap to nanochat (1.387 vs 1.199): its bigger vocabulary, then its
+architecture details (ReLU², QK norm, zero-init projections, logit softcap).
+
+## 2026-10-10 · Phase 1 · Stage 4 · Step 25: Overnight checks of Muon's step size and vocabulary
+**Objective:** Test the two open questions from Steps 23-24 with existing code.
+**What I did:** Ran the default recipe with Muon step sizes 0.01 and 0.04 (0.02 was run
+in Step 23); trained an 8,192-token tokenizer (`train_tokenizer --vocab-size 8192`) and ran
+the default recipe with it. All scored with `score_bpb`.
+**What I learned:** 0.02 was the right step size: 0.04 jumped ahead early, then stalled
+(too big to settle), and 0.01 learned slower and was overtaken. The bigger vocabulary
+tied: it learned web text better by the end, but its bigger token tables memorized NASA
+sooner, so its best NASA checkpoint came at step 4,000. The limit now is how little NASA
+text we have, which Phase 2 addresses.
+**Measurements:** best checkpoint, NASA val avg (transcript + book) / whole web val bits
+per byte: Muon 0.01: 0.977 / 1.414 (step 4,000); 0.02: 0.968 / 1.387 (step 5,500); 0.04:
+1.023 / 1.552 (step 6,000). Vocab 8,192: 0.970 / 1.398 (step 4,000), web val at step
+6,000 0.964 vs 0.982; 3.89 characters per token (4,096: 3.44); tokenizer 57 min, run
+97 min (4,096: 67 min).
+**Anomalies:** One run per setting: differences under ~0.01 may be noise.
+**Next:** Remaining gap to nanochat (1.387 vs 1.199): its architecture details (ReLU²,
+QK norm, zero-init projections, logit softcap), one at a time.
