@@ -22,6 +22,7 @@ class GPT(nn.Module):
         n_head: int,
         n_layer: int,
         dropout: float = 0.0,  # fraction of values zeroed during training
+        qk_norm: bool = False,  # normalize queries and keys before attention scores
     ):
         super().__init__()
         self.block_size = block_size
@@ -30,7 +31,7 @@ class GPT(nn.Module):
         # No position table: attention is order-blind by itself, so each head rotates its
         # queries and keys by position instead (RoPE, see pretrain/rope.py).
         # The stack: identical in shape, but each block learns its own weights.
-        self.blocks = nn.ModuleList(Block(n_embd, n_head, dropout) for _ in range(n_layer))
+        self.blocks = nn.ModuleList(Block(n_embd, n_head, dropout, qk_norm) for _ in range(n_layer))
         self.ln_f = RMSNorm(n_embd)  # final norm, before the output layer
         # Turns each position's n_embd numbers into one score per vocabulary entry.
         self.lm_head = nn.Linear(n_embd, vocab_size, bias=False)

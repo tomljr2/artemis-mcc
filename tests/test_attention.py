@@ -116,3 +116,22 @@ def test_batched_attention_matches_the_loop_of_heads_exactly():
 def test_batched_attention_rejects_channels_that_do_not_split_evenly():
     with pytest.raises(ValueError, match="divisible"):
         CausalSelfAttention(n_embd=10, n_head=4)
+
+
+def scaled_queries_output(qk_norm: bool, scale: float) -> torch.Tensor:
+    torch.manual_seed(0)
+    attn = CausalSelfAttention(n_embd=32, n_head=4, qk_norm=qk_norm)
+    with torch.no_grad():
+        attn.query.weight *= scale  # queries `scale` times larger
+    torch.manual_seed(1)
+    return attn(torch.randn(2, 8, 32))
+
+
+def test_qk_norm_makes_attention_ignore_the_size_of_queries_and_keys():
+    # Without QK norm, bigger queries mean bigger scores and a peakier softmax: attention
+    # changes. With it, queries and keys are rescaled to a fixed size before scoring, so
+    # only their direction counts and scores stay in a bounded range.
+    assert not torch.allclose(scaled_queries_output(False, 1), scaled_queries_output(False, 100))
+    assert torch.allclose(
+        scaled_queries_output(True, 1), scaled_queries_output(True, 100), atol=1e-5
+    )

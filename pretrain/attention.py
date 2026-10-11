@@ -93,9 +93,7 @@ class MultiHeadAttention(nn.Module):
         # Split the channels between the heads: 4 heads x 8 channels = 32, the same total
         # size as one 32-wide head.
         head_size = n_embd // n_head
-        self.heads = nn.ModuleList(
-            AttentionHead(n_embd, head_size, dropout) for _ in range(n_head)
-        )
+        self.heads = nn.ModuleList(AttentionHead(n_embd, head_size, dropout) for _ in range(n_head))
         # Mixes the heads' results together. Without it, each head's findings would stay in
         # its own separate slice of channels.
         self.proj = nn.Linear(n_embd, n_embd, bias=False)
@@ -116,12 +114,13 @@ class CausalSelfAttention(nn.Module):
     and slow at many small ones, each of which costs a fixed launch overhead.
     """
 
-    def __init__(self, n_embd: int, n_head: int, dropout: float = 0.0):
+    def __init__(self, n_embd: int, n_head: int, dropout: float = 0.0, qk_norm: bool = False):
         super().__init__()
         if n_embd % n_head != 0:
             raise ValueError(f"n_embd ({n_embd}) must be divisible by n_head ({n_head})")
         self.n_head = n_head
         self.head_size = n_embd // n_head
+        self.qk_norm = qk_norm
         # Each layer is every head's projection stacked: rows 0..hs-1 are head 0, and so on.
         self.query = nn.Linear(n_embd, n_embd, bias=False)
         self.key = nn.Linear(n_embd, n_embd, bias=False)
@@ -144,6 +143,12 @@ class CausalSelfAttention(nn.Module):
         # n_head dimension), instead of once per head.
         cos, sin = rope_angles(T, self.head_size, device=x.device)
         q, k = apply_rope(q, cos, sin), apply_rope(k, cos, sin)
+        if self.qk_norm:
+            # QK norm: rescale every query and key to the same size (RMS 1), so a score
+            # depends only on the angle between them. Scores can then never exceed
+            # sqrt(head_size), however large the weights grow, and the softmax can't
+            # saturate (as in nanochat; no learned scale here).
+            q, k = F.rms_norm(q, (self.head_size,)), F.rms_norm(k, (self.head_size,))
         # (B, nh, T, hs) @ (B, nh, hs, T) -> (B, nh, T, T): every head's scores in one go.
         scores = q @ k.transpose(-2, -1) / math.sqrt(self.head_size)
         weights = self.attn_dropout(F.softmax(mask_future(scores), dim=-1))

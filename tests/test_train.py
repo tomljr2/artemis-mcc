@@ -244,3 +244,10 @@ def test_training_with_muon_lowers_the_loss_on_a_repeated_batch():
     for _ in range(50):
         last = train_step(model, opt, x, y)
     assert last < first / 2
+
+
+def test_qk_norm_is_an_option_that_reaches_the_recipe():
+    args = parse_args(["--qk-norm"])
+    assert recipe(args.model, qk_norm=args.qk_norm)["qk_norm"] is True
+    assert parse_args([]).qk_norm is None  # not given: the recipe decides
+    assert recipe("gpt-11m").get("qk_norm", False) is False  # off until measured

@@ -14,10 +14,10 @@ from pretrain.norm import RMSNorm
 
 
 class Block(nn.Module):
-    def __init__(self, n_embd: int, n_head: int, dropout: float = 0.0):
+    def __init__(self, n_embd: int, n_head: int, dropout: float = 0.0, qk_norm: bool = False):
         super().__init__()
         self.ln1 = RMSNorm(n_embd)
-        self.attention = CausalSelfAttention(n_embd, n_head, dropout)
+        self.attention = CausalSelfAttention(n_embd, n_head, dropout, qk_norm)
         self.ln2 = RMSNorm(n_embd)
         self.mlp = FeedForward(n_embd, dropout)
 

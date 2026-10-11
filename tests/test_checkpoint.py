@@ -36,3 +36,17 @@ def test_loaded_model_is_ready_for_generation(tmp_path):
     save_checkpoint(path, model, {**MODEL_ARGS, "dropout": 0.5}, TOKENIZER, step=0, val_loss=9.9)
     loaded, _, _ = load_checkpoint(path)
     assert not loaded.training
+
+
+def test_a_qk_norm_model_comes_back_with_qk_norm(tmp_path):
+    # A switch that changes the maths but adds no weights: if it got lost, the weights
+    # would still load fine and the model would quietly compute something else.
+    args = {**MODEL_ARGS, "qk_norm": True}
+    torch.manual_seed(0)
+    model = GPT(**args).eval()
+    path = tmp_path / "model.pt"
+    save_checkpoint(path, model, args, TOKENIZER, step=0, val_loss=1.0)
+    loaded, _, _ = load_checkpoint(path)
+    idx = torch.randint(270, (2, 8))
+    with torch.no_grad():
+        assert torch.equal(loaded(idx)[0], model(idx)[0])

@@ -883,3 +883,21 @@ per byte: Muon 0.01: 0.977 / 1.414 (step 4,000); 0.02: 0.968 / 1.387 (step 5,500
 **Anomalies:** One run per setting: differences under ~0.01 may be noise.
 **Next:** Remaining gap to nanochat (1.387 vs 1.199): its architecture details (ReLU²,
 QK norm, zero-init projections, logit softcap), one at a time.
+
+## 2026-10-10 · Phase 1 · Stage 4 · Step 26: Try QK norm
+**Objective:** Test the first of nanochat's architecture details, QK norm, on its own.
+**What I did:** Added a `qk_norm` switch to attention (passed down from `GPT` through each
+block, `--qk-norm` in training, off by default). It rescales each head's queries and keys
+to the same size (`F.rms_norm`) after RoPE, so attention scores only depend on direction
+and stay within ±8 for 64-wide heads. nanochat's extra ×1.2 on the queries left out. Ran
+the default recipe with `--qk-norm` and scored it.
+**What I learned:** QK norm was ahead of Muon alone at every report from step 500 on (book
+val tied only at the last), at no extra time per step (it adds no weights). The gain is small but
+steady. Checkpoints must remember the switch: the weights alone load fine without it and
+then quietly compute something else.
+**Measurements:** best at step 5,500: val transcript / book / web 0.886 / 1.043 / 0.977
+(Muon alone: 0.891 / 1.045 / 0.986). Whole web val 1.372 bits per byte (Muon alone:
+1.387; nanochat: 1.199). 65 min (67 min). 171 tests pass.
+**Anomalies:** One run each: the margin (~0.015 bits per byte) is near the noise level,
+but it held at all 12 reports.
+**Next:** Make QK norm part of the default recipe.

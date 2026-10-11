@@ -106,6 +106,8 @@ CONFIGS["gpt-11m"] = {
     # Vocabulary 8,192 (tokenizer_8192_mix.json, 16.9M parameters): 0.970 / 1.398 at step
     # 4,000, then NASA is memorized sooner; web val at the end 0.964 (4,096: 0.982). 1.5x
     # the time. A tie where it counts, so 4,096 stays until there is more NASA text.
+    # --qk-norm: best at step 5,500, 0.886 / 1.043, web 0.977; 1.372 bits per byte, 65 min.
+    # Ahead of Muon alone at every report, at no extra cost per step.
     "muon_lr": 0.02,  # peak step size for Muon (--muon-lr 0: AdamW for everything)
 }
 EVAL_INTERVAL = 500  # report losses every this many steps
@@ -251,7 +253,7 @@ def estimate_loss(
     return losses
 
 
-def recipe(model_name: str, **overrides: float | None) -> dict:
+def recipe(model_name: str, **overrides: float | bool | None) -> dict:
     """The named config, with any options that were given (not None) replacing its values.
 
     (block_size can be anything: RoPE has no table of positions to outgrow.)
@@ -269,6 +271,7 @@ def main(
     block_size: int | None = None,
     batch_size: int | None = None,
     muon_lr: float | None = None,
+    qk_norm: bool | None = None,
 ) -> None:
     cfg = recipe(
         model_name,
@@ -276,6 +279,7 @@ def main(
         block_size=block_size,
         batch_size=batch_size,
         muon_lr=muon_lr,
+        qk_norm=qk_norm,
     )
     torch.manual_seed(11)
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -314,6 +318,7 @@ def main(
             "n_head": cfg["n_head"],
             "n_layer": cfg["n_layer"],
             "dropout": cfg["dropout"],
+            "qk_norm": cfg.get("qk_norm", False),
         }
         model = GPT(**gpt_args)
     model = model.to(device)
@@ -385,6 +390,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--muon-lr", type=float, help="Muon's peak step size for the blocks' grids (0: off)"
     )
+    parser.add_argument(
+        "--qk-norm",
+        action=argparse.BooleanOptionalAction,
+        help="normalize attention's queries and keys (default: the recipe's choice)",
+    )
     parser.add_argument("--checkpoint", type=Path, default=CHECKPOINT_PATH)
     parser.add_argument("--tokenizer", type=Path, default=TOKENIZER_PATH)
     return parser.parse_args(argv)
@@ -402,4 +412,5 @@ if __name__ == "__main__":
         args.block_size,
         args.batch_size,
         args.muon_lr,
+        args.qk_norm,
     )
