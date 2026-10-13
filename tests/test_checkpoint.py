@@ -50,3 +50,15 @@ def test_a_qk_norm_model_comes_back_with_qk_norm(tmp_path):
     idx = torch.randint(270, (2, 8))
     with torch.no_grad():
         assert torch.equal(loaded(idx)[0], model(idx)[0])
+
+
+def test_a_relu_squared_model_comes_back_with_relu_squared(tmp_path):
+    args = {**MODEL_ARGS, "mlp": "relu2"}
+    torch.manual_seed(0)
+    model = GPT(**args).eval()
+    path = tmp_path / "model.pt"
+    save_checkpoint(path, model, args, TOKENIZER, step=0, val_loss=1.0)
+    loaded, _, _ = load_checkpoint(path)
+    idx = torch.randint(270, (2, 8))
+    with torch.no_grad():
+        assert torch.equal(loaded(idx)[0], model(idx)[0])

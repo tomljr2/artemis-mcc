@@ -14,12 +14,19 @@ from pretrain.norm import RMSNorm
 
 
 class Block(nn.Module):
-    def __init__(self, n_embd: int, n_head: int, dropout: float = 0.0, qk_norm: bool = False):
+    def __init__(
+        self,
+        n_embd: int,
+        n_head: int,
+        dropout: float = 0.0,
+        qk_norm: bool = False,
+        mlp: str = "swiglu",
+    ):
         super().__init__()
         self.ln1 = RMSNorm(n_embd)
         self.attention = CausalSelfAttention(n_embd, n_head, dropout, qk_norm)
         self.ln2 = RMSNorm(n_embd)
-        self.mlp = FeedForward(n_embd, dropout)
+        self.mlp = FeedForward(n_embd, dropout, mlp)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = x + self.attention(self.ln1(x))  # communicate

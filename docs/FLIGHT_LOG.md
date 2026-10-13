@@ -911,3 +911,20 @@ before this step still load without QK norm (checked on the Step 23 and 26 check
 **Measurements:** 172 tests pass. No new run: the Step 26 run is this exact recipe
 (1.372 bits per byte).
 **Next:** The next nanochat detail on its own: ReLU² in the MLP.
+
+## 2026-10-13 · Phase 1 · Stage 4 · Step 28: Try ReLU² in the MLP
+**Objective:** Test nanochat's MLP (ReLU²) against ours (SwiGLU), on its own.
+**What I did:** Added `kind="relu2"` to `FeedForward`: two layers with a 4x expansion and
+`relu(h)²` in between, the same number of weights as SwiGLU's three layers. Passed down
+from `GPT` (`mlp`) and `--mlp` in training; SwiGLU stays the default. Ran the default
+recipe (Muon + QK norm) with `--mlp relu2` and scored it.
+**What I learned:** Web text came out about even (within noise). NASA text, the book val
+especially, came out better, while NASA *train* loss was higher: ReLU² memorized the small
+NASA text less and generalized more from it. That matches what limits us now (Step 25).
+Not slower per step once running (~1.5% over steps 500-6,000).
+**Measurements:** best at step 5,500: val transcript / book / web 0.883 / 1.031 / 0.973
+(SwiGLU: 0.886 / 1.043 / 0.977); NASA train 0.612 (0.593). Whole web val 1.367 bits per
+byte (SwiGLU 1.372; nanochat 1.199). 67 min (65 min). 177 tests pass.
+**Anomalies:** One run each. The web difference (0.005 bits per byte) is noise-sized; the
+book val gap (0.012) grew steadily from step 3,000 on.
+**Next:** Make ReLU² the default.

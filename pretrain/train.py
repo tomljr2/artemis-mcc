@@ -108,6 +108,9 @@ CONFIGS["gpt-11m"] = {
     # the time. A tie where it counts, so 4,096 stays until there is more NASA text.
     # --qk-norm: best at step 5,500, 0.886 / 1.043, web 0.977; 1.372 bits per byte, 65 min.
     # Ahead of Muon alone at every report, at no extra cost per step.
+    # --mlp relu2 (with QK norm): best at step 5,500, 0.883 / 1.031, web 0.973; 1.367 bits
+    # per byte, 67 min. Web about even; NASA book clearly better, with a higher NASA train
+    # loss (0.612 vs 0.593): it memorizes the small NASA text less.
     "muon_lr": 0.02,  # peak step size for Muon (--muon-lr 0: AdamW for everything)
     "qk_norm": True,  # normalize attention's queries and keys (--no-qk-norm: off)
 }
@@ -254,7 +257,7 @@ def estimate_loss(
     return losses
 
 
-def recipe(model_name: str, **overrides: float | bool | None) -> dict:
+def recipe(model_name: str, **overrides: float | bool | str | None) -> dict:
     """The named config, with any options that were given (not None) replacing its values.
 
     (block_size can be anything: RoPE has no table of positions to outgrow.)
@@ -273,6 +276,7 @@ def main(
     batch_size: int | None = None,
     muon_lr: float | None = None,
     qk_norm: bool | None = None,
+    mlp: str | None = None,
 ) -> None:
     cfg = recipe(
         model_name,
@@ -281,6 +285,7 @@ def main(
         batch_size=batch_size,
         muon_lr=muon_lr,
         qk_norm=qk_norm,
+        mlp=mlp,
     )
     torch.manual_seed(11)
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -320,6 +325,7 @@ def main(
             "n_layer": cfg["n_layer"],
             "dropout": cfg["dropout"],
             "qk_norm": cfg.get("qk_norm", False),
+            "mlp": cfg.get("mlp", "swiglu"),
         }
         model = GPT(**gpt_args)
     model = model.to(device)
@@ -396,6 +402,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         action=argparse.BooleanOptionalAction,
         help="normalize attention's queries and keys (default: the recipe's choice)",
     )
+    parser.add_argument(
+        "--mlp", choices=["swiglu", "relu2"], help="the MLP's kind (default: the recipe's)"
+    )
     parser.add_argument("--checkpoint", type=Path, default=CHECKPOINT_PATH)
     parser.add_argument("--tokenizer", type=Path, default=TOKENIZER_PATH)
     return parser.parse_args(argv)
@@ -414,4 +423,5 @@ if __name__ == "__main__":
         args.batch_size,
         args.muon_lr,
         args.qk_norm,
+        args.mlp,
     )
