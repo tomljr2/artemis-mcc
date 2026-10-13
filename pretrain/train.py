@@ -113,6 +113,7 @@ CONFIGS["gpt-11m"] = {
     # loss (0.612 vs 0.593): it memorizes the small NASA text less.
     "muon_lr": 0.02,  # peak step size for Muon (--muon-lr 0: AdamW for everything)
     "qk_norm": True,  # normalize attention's queries and keys (--no-qk-norm: off)
+    "mlp": "relu2",  # nanochat's MLP: memorizes the small NASA text less (--mlp swiglu)
 }
 EVAL_INTERVAL = 500  # report losses every this many steps
 EVAL_BATCHES = 100  # batches averaged per loss report

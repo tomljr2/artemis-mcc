@@ -928,3 +928,14 @@ byte (SwiGLU 1.372; nanochat 1.199). 67 min (65 min). 177 tests pass.
 **Anomalies:** One run each. The web difference (0.005 bits per byte) is noise-sized; the
 book val gap (0.012) grew steadily from step 3,000 on.
 **Next:** Make ReLU² the default.
+
+## 2026-10-13 · Phase 1 · Stage 4 · Step 29: Make ReLU² the default
+**Objective:** Plain `python -m pretrain.train` should use the best recipe measured.
+**What I did:** The `gpt-11m` recipe now sets `mlp` to `relu2`; `--mlp swiglu` switches
+back. Older recipes (e.g. `--model gpt`) stay as they were.
+**What I learned:** As with QK norm, checkpoints store the MLP's kind with the model's
+shape, so files saved before this step still load as SwiGLU (checked on the Step 26 and
+28 checkpoints).
+**Measurements:** 178 tests pass. No new run: the Step 28 run is this exact recipe
+(1.367 bits per byte; book val 1.031).
+**Next:** The next nanochat detail on its own: zero-initialized output projections.

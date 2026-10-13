@@ -263,4 +263,10 @@ def test_the_mlp_kind_is_an_option_that_reaches_the_recipe():
     args = parse_args(["--mlp", "relu2"])
     assert recipe(args.model, mlp=args.mlp)["mlp"] == "relu2"
     assert parse_args([]).mlp is None  # not given: the recipe decides
-    assert recipe("gpt-11m").get("mlp", "swiglu") == "swiglu"  # unchanged until measured
+
+
+def test_the_11m_recipe_uses_relu_squared_and_the_option_can_switch_back():
+    assert recipe("gpt-11m")["mlp"] == "relu2"  # measured in Step 28: book val 1.031 vs 1.043
+    args = parse_args(["--mlp", "swiglu"])
+    assert recipe(args.model, mlp=args.mlp)["mlp"] == "swiglu"
+    assert recipe("gpt").get("mlp", "swiglu") == "swiglu"  # older recipes stay as they were
