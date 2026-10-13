@@ -109,6 +109,7 @@ CONFIGS["gpt-11m"] = {
     # --qk-norm: best at step 5,500, 0.886 / 1.043, web 0.977; 1.372 bits per byte, 65 min.
     # Ahead of Muon alone at every report, at no extra cost per step.
     "muon_lr": 0.02,  # peak step size for Muon (--muon-lr 0: AdamW for everything)
+    "qk_norm": True,  # normalize attention's queries and keys (--no-qk-norm: off)
 }
 EVAL_INTERVAL = 500  # report losses every this many steps
 EVAL_BATCHES = 100  # batches averaged per loss report

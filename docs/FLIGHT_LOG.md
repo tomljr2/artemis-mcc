@@ -901,3 +901,13 @@ then quietly compute something else.
 **Anomalies:** One run each: the margin (~0.015 bits per byte) is near the noise level,
 but it held at all 12 reports.
 **Next:** Make QK norm part of the default recipe.
+
+## 2026-10-11 · Phase 1 · Stage 4 · Step 27: Make QK norm the default
+**Objective:** Plain `python -m pretrain.train` should use the best recipe measured.
+**What I did:** The `gpt-11m` recipe now sets `qk_norm` on; `--no-qk-norm` turns it off.
+Older recipes (e.g. `--model gpt`) stay as they were.
+**What I learned:** Checkpoints store the switch with the model's shape, so files saved
+before this step still load without QK norm (checked on the Step 23 and 26 checkpoints).
+**Measurements:** 172 tests pass. No new run: the Step 26 run is this exact recipe
+(1.372 bits per byte).
+**Next:** The next nanochat detail on its own: ReLU² in the MLP.

@@ -250,4 +250,10 @@ def test_qk_norm_is_an_option_that_reaches_the_recipe():
     args = parse_args(["--qk-norm"])
     assert recipe(args.model, qk_norm=args.qk_norm)["qk_norm"] is True
     assert parse_args([]).qk_norm is None  # not given: the recipe decides
-    assert recipe("gpt-11m").get("qk_norm", False) is False  # off until measured
+
+
+def test_the_11m_recipe_uses_qk_norm_and_the_option_can_turn_it_off():
+    assert recipe("gpt-11m")["qk_norm"] is True  # measured in Step 26: 1.372 vs 1.387
+    args = parse_args(["--no-qk-norm"])
+    assert recipe(args.model, qk_norm=args.qk_norm)["qk_norm"] is False
+    assert recipe("gpt").get("qk_norm", False) is False  # older recipes stay as they were
