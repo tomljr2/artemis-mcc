@@ -292,3 +292,10 @@ def test_zero_proj_is_an_option_that_reaches_the_recipe():
     assert recipe(args.model, zero_proj=args.zero_proj)["zero_proj"] is True
     assert parse_args([]).zero_proj is None  # not given: the recipe decides
     assert recipe("gpt-11m").get("zero_proj", False) is False  # off until measured
+
+
+def test_logit_softcap_is_an_option_that_reaches_the_recipe():
+    args = parse_args(["--logit-softcap", "15"])
+    assert recipe(args.model, logit_softcap=args.logit_softcap)["logit_softcap"] == 15.0
+    assert parse_args([]).logit_softcap is None  # not given: the recipe decides
+    assert recipe("gpt-11m").get("logit_softcap") is None  # off until measured

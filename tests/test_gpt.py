@@ -130,3 +130,32 @@ def test_zero_proj_starts_every_block_as_a_pass_through():
 
 def test_by_default_the_last_layers_start_random():
     assert make_model().blocks[0].attention.proj.weight.any()
+
+
+def test_softcap_keeps_every_score_below_the_cap():
+    # Blow up the output layer: uncapped scores reach the hundreds, capped ones stay within
+    # +-15 however large the weights get. (On paper tanh never reaches 1; in float32 it
+    # rounds to exactly 1 for big inputs, so the cap itself can be hit, never passed.)
+    torch.manual_seed(0)
+    args = {"vocab_size": 20, "block_size": 8, "n_embd": 16, "n_head": 4, "n_layer": 2}
+    plain, capped = GPT(**args), GPT(**args, logit_softcap=15.0)
+    capped.load_state_dict(plain.state_dict())
+    idx = torch.tensor([[1, 2, 3]])
+    with torch.no_grad():
+        for model in (plain, capped):
+            model.lm_head.weight.mul_(1000)
+        assert plain(idx)[0].abs().max() > 100
+        assert capped(idx)[0].abs().max() <= 15
+
+
+def test_softcap_barely_changes_small_scores():
+    # 15 * tanh(x / 15) is close to x when x is small: ordinary scores pass almost as is.
+    torch.manual_seed(0)
+    args = {"vocab_size": 20, "block_size": 8, "n_embd": 16, "n_head": 4, "n_layer": 2}
+    plain, capped = GPT(**args), GPT(**args, logit_softcap=15.0)
+    capped.load_state_dict(plain.state_dict())
+    idx = torch.tensor([[1, 2, 3]])
+    with torch.no_grad():
+        logits = plain(idx)[0]
+        assert logits.abs().max() < 3
+        assert torch.allclose(capped(idx)[0], logits, atol=0.05)

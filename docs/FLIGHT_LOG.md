@@ -956,3 +956,20 @@ deep stacks, where many random additions pile up.) A tie, so it stays off.
 **Anomalies:** One run each; all final differences are noise-sized. Run times differed by
 ~1.5 min, but the computation is identical: machine noise.
 **Next:** The last nanochat detail on our list, on its own: logit softcap.
+
+## 2026-10-14 · Phase 1 · Stage 4 · Step 31: Try logit softcap
+**Objective:** Test nanochat's cap on the output scores, on its own.
+**What I did:** Added `logit_softcap` to `GPT`: scores become `cap * tanh(score / cap)`,
+so small scores pass almost unchanged and none can go past the cap. `--logit-softcap` in
+training, off by default. Ran the default recipe (Muon + QK norm + ReLU²) with cap 15.
+**What I learned:** It starts slower (behind at step 500), then is ahead or even on all
+three val texts at every report from step 1,500 on, while its NASA *train* loss is higher:
+like ReLU², it memorizes the small NASA text a little less. But the margin is small, and
+"noise-sized" has so far been a guess: we have never measured how much two identical runs
+differ. In float32, tanh of a big input rounds to exactly 1, so a score can land on the
+cap (never past it); a first test assumed otherwise.
+**Measurements:** best at step 5,500: val transcript / book / web 0.879 / 1.030 / 0.972
+(default: 0.883 / 1.031 / 0.973); NASA train 0.619 (0.612). Whole web val 1.365 bits per
+byte (1.367). Step 500 web val 1.322 (1.320). 67 min. 186 tests pass.
+**Anomalies:** One run each; differences of 0.001-0.004.
+**Next:** Measure run-to-run noise: the default recipe again with a different seed.

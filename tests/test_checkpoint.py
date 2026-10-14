@@ -62,3 +62,16 @@ def test_a_relu_squared_model_comes_back_with_relu_squared(tmp_path):
     idx = torch.randint(270, (2, 8))
     with torch.no_grad():
         assert torch.equal(loaded(idx)[0], model(idx)[0])
+
+
+def test_a_softcapped_model_comes_back_softcapped(tmp_path):
+    # Like QK norm, the cap adds no weights, so only the saved args remember it.
+    args = {**MODEL_ARGS, "logit_softcap": 0.5}  # a tiny cap, so it changes every score
+    torch.manual_seed(0)
+    model = GPT(**args).eval()
+    path = tmp_path / "model.pt"
+    save_checkpoint(path, model, args, TOKENIZER, step=0, val_loss=1.0)
+    loaded, _, _ = load_checkpoint(path)
+    idx = torch.randint(270, (2, 8))
+    with torch.no_grad():
+        assert torch.equal(loaded(idx)[0], model(idx)[0])

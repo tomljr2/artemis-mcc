@@ -25,9 +25,11 @@ class GPT(nn.Module):
         qk_norm: bool = False,  # normalize queries and keys before attention scores
         mlp: str = "swiglu",  # the MLP's kind: "swiglu" or "relu2" (see pretrain/mlp.py)
         zero_proj: bool = False,  # start each block's last layers at zero
+        logit_softcap: float | None = None,  # squash scores into (-cap, cap); None/0: off
     ):
         super().__init__()
         self.block_size = block_size
+        self.logit_softcap = logit_softcap
         # What each character is: one learned n_embd-vector per token id.
         self.token_embedding = nn.Embedding(vocab_size, n_embd)
         # No position table: attention is order-blind by itself, so each head rotates its
@@ -57,6 +59,13 @@ class GPT(nn.Module):
         for block in self.blocks:
             x = block(x)  # (B, T, n_embd): each block reads and adds to the residual stream
         logits = self.lm_head(self.ln_f(x))  # (B, T, vocab_size)
+        if self.logit_softcap:
+            # Softcap (as in Gemma 2 and nanochat): cap * tanh(score / cap). tanh is about
+            # its input near 0 and flattens out toward +-1, so ordinary scores pass almost
+            # unchanged while no score can go past the cap. The model can't grow ever
+            # more certain of a guess just by inflating its scores.
+            c = self.logit_softcap
+            logits = c * torch.tanh(logits / c)
         if targets is None:
             return logits, None
         V = logits.shape[-1]

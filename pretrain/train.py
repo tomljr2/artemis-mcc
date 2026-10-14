@@ -114,6 +114,10 @@ CONFIGS["gpt-11m"] = {
     # --zero-proj (with ReLU²): best at step 5,500, 0.878 / 1.032, web 0.973; 1.366 bits per
     # byte (ReLU² alone 1.367). Ahead at step 500 (web 1.313 vs 1.320), even from step
     # 1,000 on: a tie, so it stays off.
+    # --logit-softcap 15 (with ReLU²): best at step 5,500, 0.879 / 1.030, web 0.972; 1.365
+    # bits per byte (1.367). Behind at step 500, ahead or even at every report from 1,500
+    # on, with a higher NASA train loss (0.619 vs 0.612). Small: decided after measuring
+    # how much two runs differ by chance.
     "muon_lr": 0.02,  # peak step size for Muon (--muon-lr 0: AdamW for everything)
     "qk_norm": True,  # normalize attention's queries and keys (--no-qk-norm: off)
     "mlp": "relu2",  # nanochat's MLP: memorizes the small NASA text less (--mlp swiglu)
@@ -282,6 +286,7 @@ def main(
     qk_norm: bool | None = None,
     mlp: str | None = None,
     zero_proj: bool | None = None,
+    logit_softcap: float | None = None,
 ) -> None:
     cfg = recipe(
         model_name,
@@ -292,6 +297,7 @@ def main(
         qk_norm=qk_norm,
         mlp=mlp,
         zero_proj=zero_proj,
+        logit_softcap=logit_softcap,
     )
     torch.manual_seed(11)
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -333,6 +339,7 @@ def main(
             "qk_norm": cfg.get("qk_norm", False),
             "mlp": cfg.get("mlp", "swiglu"),
             "zero_proj": cfg.get("zero_proj", False),
+            "logit_softcap": cfg.get("logit_softcap"),
         }
         model = GPT(**gpt_args)
     model = model.to(device)
@@ -417,6 +424,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         action=argparse.BooleanOptionalAction,
         help="start each block's last layers at zero (default: the recipe's choice)",
     )
+    parser.add_argument(
+        "--logit-softcap", type=float, help="cap on the output scores, e.g. 15 (0: off)"
+    )
     parser.add_argument("--checkpoint", type=Path, default=CHECKPOINT_PATH)
     parser.add_argument("--tokenizer", type=Path, default=TOKENIZER_PATH)
     return parser.parse_args(argv)
@@ -437,4 +447,5 @@ if __name__ == "__main__":
         args.qk_norm,
         args.mlp,
         args.zero_proj,
+        args.logit_softcap,
     )
