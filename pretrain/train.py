@@ -111,6 +111,9 @@ CONFIGS["gpt-11m"] = {
     # --mlp relu2 (with QK norm): best at step 5,500, 0.883 / 1.031, web 0.973; 1.367 bits
     # per byte, 67 min. Web about even; NASA book clearly better, with a higher NASA train
     # loss (0.612 vs 0.593): it memorizes the small NASA text less.
+    # --zero-proj (with ReLU²): best at step 5,500, 0.878 / 1.032, web 0.973; 1.366 bits per
+    # byte (ReLU² alone 1.367). Ahead at step 500 (web 1.313 vs 1.320), even from step
+    # 1,000 on: a tie, so it stays off.
     "muon_lr": 0.02,  # peak step size for Muon (--muon-lr 0: AdamW for everything)
     "qk_norm": True,  # normalize attention's queries and keys (--no-qk-norm: off)
     "mlp": "relu2",  # nanochat's MLP: memorizes the small NASA text less (--mlp swiglu)
@@ -278,6 +281,7 @@ def main(
     muon_lr: float | None = None,
     qk_norm: bool | None = None,
     mlp: str | None = None,
+    zero_proj: bool | None = None,
 ) -> None:
     cfg = recipe(
         model_name,
@@ -287,6 +291,7 @@ def main(
         muon_lr=muon_lr,
         qk_norm=qk_norm,
         mlp=mlp,
+        zero_proj=zero_proj,
     )
     torch.manual_seed(11)
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -327,6 +332,7 @@ def main(
             "dropout": cfg["dropout"],
             "qk_norm": cfg.get("qk_norm", False),
             "mlp": cfg.get("mlp", "swiglu"),
+            "zero_proj": cfg.get("zero_proj", False),
         }
         model = GPT(**gpt_args)
     model = model.to(device)
@@ -406,6 +412,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--mlp", choices=["swiglu", "relu2"], help="the MLP's kind (default: the recipe's)"
     )
+    parser.add_argument(
+        "--zero-proj",
+        action=argparse.BooleanOptionalAction,
+        help="start each block's last layers at zero (default: the recipe's choice)",
+    )
     parser.add_argument("--checkpoint", type=Path, default=CHECKPOINT_PATH)
     parser.add_argument("--tokenizer", type=Path, default=TOKENIZER_PATH)
     return parser.parse_args(argv)
@@ -425,4 +436,5 @@ if __name__ == "__main__":
         args.muon_lr,
         args.qk_norm,
         args.mlp,
+        args.zero_proj,
     )

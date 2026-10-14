@@ -24,6 +24,7 @@ class GPT(nn.Module):
         dropout: float = 0.0,  # fraction of values zeroed during training
         qk_norm: bool = False,  # normalize queries and keys before attention scores
         mlp: str = "swiglu",  # the MLP's kind: "swiglu" or "relu2" (see pretrain/mlp.py)
+        zero_proj: bool = False,  # start each block's last layers at zero
     ):
         super().__init__()
         self.block_size = block_size
@@ -35,6 +36,15 @@ class GPT(nn.Module):
         self.blocks = nn.ModuleList(
             Block(n_embd, n_head, dropout, qk_norm, mlp) for _ in range(n_layer)
         )
+        if zero_proj:
+            # nanochat's start: the layers that write each block's result into the residual
+            # stream begin at exactly zero, so every block starts as a pass-through and adds
+            # something only once training finds it useful. The layers before them keep
+            # their random start (all-zero layers in a row could never learn).
+            with torch.no_grad():
+                for block in self.blocks:
+                    block.attention.proj.weight.zero_()
+                    block.mlp.down.weight.zero_()
         self.ln_f = RMSNorm(n_embd)  # final norm, before the output layer
         # Turns each position's n_embd numbers into one score per vocabulary entry.
         self.lm_head = nn.Linear(n_embd, vocab_size, bias=False)

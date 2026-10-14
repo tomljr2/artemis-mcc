@@ -939,3 +939,20 @@ shape, so files saved before this step still load as SwiGLU (checked on the Step
 **Measurements:** 178 tests pass. No new run: the Step 28 run is this exact recipe
 (1.367 bits per byte; book val 1.031).
 **Next:** The next nanochat detail on its own: zero-initialized output projections.
+
+## 2026-10-13 · Phase 1 · Stage 4 · Step 30: Try zero-initialized output projections
+**Objective:** Test nanochat's start for each block's last layers (exactly zero), on its own.
+**What I did:** Added `zero_proj` to `GPT`: each block's attention `proj` and MLP `down`
+start at zero, so every block starts as a pass-through; the layers before them keep their
+random start. `--zero-proj` in training, off by default. A test checks that every weight
+still moves within two steps. Ran the default recipe (Muon + QK norm + ReLU²) with it.
+**What I learned:** It only helps at the very start: ahead at step 500 (the blocks don't
+add random noise while the model is still guessing), then even from step 1,000 on. For a
+6-block model, a random start does no lasting harm. (Untested guess: it matters more for
+deep stacks, where many random additions pile up.) A tie, so it stays off.
+**Measurements:** best at step 5,500: val transcript / book / web 0.878 / 1.032 / 0.973
+(default: 0.883 / 1.031 / 0.973). Whole web val 1.366 bits per byte (default 1.367). Step
+500 web val 1.313 (1.320). 182 tests pass.
+**Anomalies:** One run each; all final differences are noise-sized. Run times differed by
+~1.5 min, but the computation is identical: machine noise.
+**Next:** The last nanochat detail on our list, on its own: logit softcap.

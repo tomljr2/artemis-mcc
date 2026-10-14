@@ -270,3 +270,25 @@ def test_the_11m_recipe_uses_relu_squared_and_the_option_can_switch_back():
     args = parse_args(["--mlp", "swiglu"])
     assert recipe(args.model, mlp=args.mlp)["mlp"] == "swiglu"
     assert recipe("gpt").get("mlp", "swiglu") == "swiglu"  # older recipes stay as they were
+
+
+def test_a_zero_proj_model_still_trains_every_weight():
+    # At step 0 the zero layers block the gradient to the layers before them (zero times
+    # anything is zero). The zero layers themselves get a gradient, though, so after one
+    # step they are no longer zero and from the second step on everything learns.
+    torch.manual_seed(0)
+    model = GPT(vocab_size=20, block_size=16, n_embd=32, n_head=4, n_layer=2, zero_proj=True)
+    before = {n: p.clone() for n, p in model.named_parameters()}
+    opt = build_optimizer(model, learning_rate=1e-3, muon_lr=0.02)
+    x, y = torch.randint(0, 20, (4, 16)), torch.randint(0, 20, (4, 16))
+    for _ in range(2):
+        train_step(model, opt, x, y)
+    unchanged = [n for n, p in model.named_parameters() if torch.equal(p, before[n])]
+    assert unchanged == []
+
+
+def test_zero_proj_is_an_option_that_reaches_the_recipe():
+    args = parse_args(["--zero-proj"])
+    assert recipe(args.model, zero_proj=args.zero_proj)["zero_proj"] is True
+    assert parse_args([]).zero_proj is None  # not given: the recipe decides
+    assert recipe("gpt-11m").get("zero_proj", False) is False  # off until measured

@@ -111,3 +111,22 @@ def test_the_model_has_no_bias_parameters():
     # Like Llama: every layer is a pure "multiply by weights", with no "+ b" offset.
     names = [name for name, _ in make_model().named_parameters()]
     assert not [name for name in names if name.endswith("bias")]
+
+
+def test_zero_proj_starts_every_block_as_a_pass_through():
+    # nanochat's start: each block's last layers are exactly zero, so at step 0 the blocks
+    # add nothing and the embeddings reach the output untouched (see the test above).
+    torch.manual_seed(0)
+    model = GPT(vocab_size=20, block_size=8, n_embd=16, n_head=4, n_layer=3, zero_proj=True)
+    for block in model.blocks:
+        assert not block.attention.proj.weight.any() and not block.mlp.down.weight.any()
+        assert block.attention.query.weight.any()  # only the last layers start at zero
+    idx = torch.tensor([[1, 2, 3]])
+    with torch.no_grad():
+        logits, _ = model(idx)
+        expected = model.lm_head(model.ln_f(model.token_embedding(idx)))
+    assert torch.allclose(logits, expected, atol=1e-6)
+
+
+def test_by_default_the_last_layers_start_random():
+    assert make_model().blocks[0].attention.proj.weight.any()
