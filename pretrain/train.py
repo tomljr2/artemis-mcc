@@ -116,8 +116,11 @@ CONFIGS["gpt-11m"] = {
     # 1,000 on: a tie, so it stays off.
     # --logit-softcap 15 (with ReLU²): best at step 5,500, 0.879 / 1.030, web 0.972; 1.365
     # bits per byte (1.367). Behind at step 500, ahead or even at every report from 1,500
-    # on, with a higher NASA train loss (0.619 vs 0.612). Small: decided after measuring
-    # how much two runs differ by chance.
+    # on, with a higher NASA train loss (0.619 vs 0.612). Within run-to-run noise (below),
+    # so it stays off.
+    # Noise: this recipe with --seed 12 (all else equal): best at step 6,000, 0.880 / 1.031,
+    # web 0.968; 1.360 bits per byte vs 1.367 with seed 11. So two identical runs can end
+    # ~0.007 bits per byte apart; reports differ by up to 0.015 (transcript), 0.005 (book).
     "muon_lr": 0.02,  # peak step size for Muon (--muon-lr 0: AdamW for everything)
     "qk_norm": True,  # normalize attention's queries and keys (--no-qk-norm: off)
     "mlp": "relu2",  # nanochat's MLP: memorizes the small NASA text less (--mlp swiglu)
@@ -287,6 +290,7 @@ def main(
     mlp: str | None = None,
     zero_proj: bool | None = None,
     logit_softcap: float | None = None,
+    seed: int = 11,
 ) -> None:
     cfg = recipe(
         model_name,
@@ -299,7 +303,7 @@ def main(
         zero_proj=zero_proj,
         logit_softcap=logit_softcap,
     )
-    torch.manual_seed(11)
+    torch.manual_seed(seed)  # starting weights, training windows, report windows
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
     transcript = TEXT_PATH.read_text(encoding="utf-8")
@@ -427,6 +431,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--logit-softcap", type=float, help="cap on the output scores, e.g. 15 (0: off)"
     )
+    parser.add_argument(
+        "--seed", type=int, default=11, help="random seed: same recipe, different luck"
+    )
     parser.add_argument("--checkpoint", type=Path, default=CHECKPOINT_PATH)
     parser.add_argument("--tokenizer", type=Path, default=TOKENIZER_PATH)
     return parser.parse_args(argv)
@@ -448,4 +455,5 @@ if __name__ == "__main__":
         args.mlp,
         args.zero_proj,
         args.logit_softcap,
+        args.seed,
     )

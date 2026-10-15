@@ -299,3 +299,10 @@ def test_logit_softcap_is_an_option_that_reaches_the_recipe():
     assert recipe(args.model, logit_softcap=args.logit_softcap)["logit_softcap"] == 15.0
     assert parse_args([]).logit_softcap is None  # not given: the recipe decides
     assert recipe("gpt-11m").get("logit_softcap") is None  # off until measured
+
+
+def test_the_seed_is_an_option_and_stays_11_by_default():
+    # The seed picks the starting weights and every random window: a different seed is the
+    # same recipe with different luck. 11 is what every run so far used.
+    assert parse_args([]).seed == 11
+    assert parse_args(["--seed", "12"]).seed == 12

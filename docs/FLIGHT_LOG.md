@@ -973,3 +973,24 @@ cap (never past it); a first test assumed otherwise.
 byte (1.367). Step 500 web val 1.322 (1.320). 67 min. 186 tests pass.
 **Anomalies:** One run each; differences of 0.001-0.004.
 **Next:** Measure run-to-run noise: the default recipe again with a different seed.
+
+## 2026-10-14 · Phase 1 · Stage 4 · Step 32: Measure run-to-run noise
+**Objective:** Find out how much two identical runs differ by chance, to judge Steps 26-31.
+**What I did:** Added `--seed` to training (default 11, what every run so far used). The
+seed sets the starting weights, the training windows and the report windows. Reran the
+default recipe (Muon + QK norm + ReLU²) with seed 12, changing nothing else.
+**What I learned:** Luck alone moved the whole-web-val score by 0.007 bits per byte, and
+the best checkpoint from step 5,500 to 6,000. Judged against that:
+- Muon (Step 23, 0.036 better) is clearly real.
+- QK norm (Step 26, 0.015) is about twice the noise and led at every report: likely real.
+- ReLU² (Step 28): its web gain (0.005) is noise, but its book val gain (0.012) is more
+  than twice the largest book gap between the two seeds (0.005): likely real.
+- Zero-init projections (Step 30, 0.001) and softcap (Step 31, 0.002): noise. Both stay
+  off.
+Two seeds give one sample of the noise, so 0.007 is a rough size, not a firm bound.
+**Measurements:** seed 12 best at step 6,000: val transcript / book / web 0.880 / 1.031 /
+0.968, 1.360 bits per byte (seed 11: step 5,500, 0.883 / 1.031 / 0.973, 1.367). Largest
+gap at any report: transcript 0.015 (step 3,000), book 0.005, web 0.006. 66 min.
+187 tests pass.
+**Anomalies:** None.
+**Next:** The nanochat details are done; back to Stage 4's plan: the final local run.
