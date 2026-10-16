@@ -1,4 +1,4 @@
-from pretrain.plot_losses import parse_log
+from pretrain.plot_losses import line_style, parse_log
 
 CURRENT = """gpt: 811,904 parameters
 step     0 | train 4.655 | val transcript 4.681 | val book 4.641 |     3s
@@ -26,3 +26,8 @@ def test_reads_the_older_printout_format_too():
         "train": [(0, 4.485), (500, 1.235)],
         "val": [(0, 4.483), (500, 1.452)],
     }
+
+
+def test_every_training_series_is_dashed_and_every_validation_series_solid():
+    assert [line_style(n) for n in ("train", "train web")] == ["--", "--"]
+    assert [line_style(n) for n in ("val", "val book", "val web")] == ["-", "-", "-"]

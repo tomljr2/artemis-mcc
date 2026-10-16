@@ -33,6 +33,11 @@ def parse_log(text: str) -> dict[str, list[tuple[int, float]]]:
     return series
 
 
+def line_style(name: str) -> str:
+    """Training series dashed, validation solid: the gap between them is the story."""
+    return "--" if name.startswith("train") else "-"
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("logs", nargs="+", type=Path, help="training printouts to plot")
@@ -48,8 +53,7 @@ def main() -> None:
         for name, points in parse_log(log.read_text(encoding="utf-8")).items():
             steps, losses = zip(*points, strict=True)
             label = name if len(args.logs) == 1 else f"{log.stem}: {name}"
-            # Training loss dashed, validation solid: the gap between them is the story.
-            ax.plot(steps, losses, label=label, linestyle="--" if name == "train" else "-")
+            ax.plot(steps, losses, label=label, linestyle=line_style(name))
     if args.ymax:
         ax.set_ylim(top=args.ymax)
     ax.set_xlabel("training step")

@@ -1012,3 +1012,19 @@ DELTA-F), but no coherent conversation.
 67 min to step 6,000 (with the reports), plus 2 min of scoring.
 **Anomalies:** None.
 **Next:** Publish the training curves.
+
+## 2026-10-16 · Phase 1 · Stage 4 · Step 34: Publish the Artemis I training curves
+**Objective:** Show how the final run learned, as one chart.
+**What I did:** Drew `docs/curves/artemis_i.png` from the run's printout with
+`pretrain.plot_losses` (`--ymax 1.4`). Training series are now all dashed: the rule was
+`name == "train"`, which drew "train web" solid like a validation series; it is now
+`line_style()`, with a test. ("train" is the NASA training text.)
+**What I learned:** The chart shows the run's story at a glance. Web train and web val lie
+on top of each other all the way: 6,000 steps read ~74M web tokens (75% of 16,384 per
+step), less than one pass over the 94M, so there was nothing to memorize yet. NASA's 1.1M
+tokens, at 25%, were read ~23 times. NASA train keeps falling (0.60) while NASA val flattens from ~step 4,000
+(transcript 0.88, book 1.03): the widening gap is the memorization that sets the stopping
+point, and the reason for Phase 2's extra NASA text.
+**Measurements:** same run as Step 33. 188 tests pass.
+**Anomalies:** None.
+**Next:** Update the plan and README for the finished recipe and the local-only run.
