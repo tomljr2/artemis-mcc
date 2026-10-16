@@ -994,3 +994,21 @@ gap at any report: transcript 0.015 (step 3,000), book 0.005, web 0.006. 66 min.
 187 tests pass.
 **Anomalies:** None.
 **Next:** The nanochat details are done; back to Stage 4's plan: the final local run.
+
+## 2026-10-15 · Phase 1 · Stage 4 · Step 33: The final Artemis I run
+**Objective:** Train Artemis I with the finished recipe, using the defaults alone.
+**What I did:** Ran `python -m pretrain.train --checkpoint checkpoints/artemis_i.pt` (no
+recipe flags: 13.8M parameters, 4,096-token mixed tokenizer, 256-token windows, 25% NASA /
+75% FineWeb-Edu, Muon, QK norm, ReLU², 6,000 steps, seed 11) on the GTX 1080, then scored
+it with `score_bpb`.
+**What I learned:** Training is fully reproducible: every report matches the Step 28 run
+(same recipe and seed, before it was the default) to three decimals, from step 0 to step
+6,000, and so does the final score. The sample reads as an Apollo 11 transcript: correct
+timestamp and speaker format, real call signs and jargon (AOS at Goldstone, TEI, P00,
+DELTA-F), but no coherent conversation.
+**Measurements:** best checkpoint at step 5,500: val transcript / book / web 0.883 / 1.031
+/ 0.973 per character; whole web val 1.367 bits per byte (nanochat on the same data:
+1.199; this project's first 64-token run: 1.522). Run-to-run noise ~0.007 (Step 32).
+67 min to step 6,000 (with the reports), plus 2 min of scoring.
+**Anomalies:** None.
+**Next:** Publish the training curves.
