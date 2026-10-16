@@ -1028,3 +1028,20 @@ point, and the reason for Phase 2's extra NASA text.
 **Measurements:** same run as Step 33. 188 tests pass.
 **Anomalies:** None.
 **Next:** Update the plan and README for the finished recipe and the local-only run.
+
+## 2026-10-16 · Phase 1 · Stage 4 · Step 35: Bring the plan and READMEs up to date
+**Objective:** Make the docs match what was actually built and run.
+**What I did:** README: Stage 2 notes SwiGLU was later swapped for ReLU²; Stage 4 says the
+final run is trained, writeup and tag next. PLAN: ticked the tokenizer item (done in Stage
+3); the Phase 1 compute row is now the local GTX 1080 at $0 instead of 8xH100, and the
+total budget drops to $200-550 (the sum of the other phases). `pretrain/README.md`: the
+final run happened locally, the schedule item is ticked, curves are published.
+**What I learned:** The nanochat item ("swap in your model, match its loss curve") is only
+partly done, and the docs now say so: we reproduced nanochat on our data, then brought its
+ideas into our model one at a time instead of swapping models. The gap is not closed
+(1.367 vs 1.199 bits per byte). Not comparable as a race either: nanochat trained on web
+text only with a 73.5M-parameter model (mostly its 32,768-token tables), ours spends 25% of
+its steps on NASA text.
+**Measurements:** none (docs only). 188 tests pass.
+**Anomalies:** None.
+**Next:** Writeup 1.

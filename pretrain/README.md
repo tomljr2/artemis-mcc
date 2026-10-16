@@ -10,7 +10,7 @@ reviewed, and committed with a Flight Log entry before the next one starts.
 - `torch.compile` needs Triton on compute 7.0+, so skip it locally.
 - Fits comfortably: models up to ~10 to 30M parameters with context 256 to 512. That is
   plenty for debugging, overfitting tests, and loss-curve sanity checks.
-- The final Artemis I run happens on rented GPUs, using the same code.
+- The final Artemis I run happened here too (owner's choice: no cloud run).
 
 ## Countdown: Phase 1 steps
 
@@ -45,7 +45,11 @@ reviewed, and committed with a Flight Log entry before the next one starts.
 - [x] Train the GPT on BPE tokens instead of characters.
 
 **Stage 4: real training**
-- [ ] Warmup + cosine or WSD schedule, gradient clipping, checkpoints, eval loss.
+- [x] Warmup + cosine or WSD schedule, gradient clipping, checkpoints, eval loss.
 - [x] Mix in FineWeb-Edu general text: `data/prepare_fineweb_edu.py`, `train.py --web`.
-- [ ] Reproduce a small nanochat run, swap in your model, match its loss curve.
-- [ ] Final mixed general + NASA run, locally on the GTX 1080. Publish curves. Tag `artemis-i`.
+- [ ] Reproduce a small nanochat run, swap in your model, match its loss curve. Partly:
+      nanochat reproduced on our data (1.199 bits per byte); its ideas brought into our model
+      one at a time instead (Muon, QK norm, ReLU²: 1.423 -> 1.367). Not matched.
+- [x] Final mixed general + NASA run, locally on the GTX 1080: `checkpoints/artemis_i.pt`.
+- [x] Publish curves: `docs/curves/artemis_i.png`.
+- [ ] Writeup 1. Tag `artemis-i`.

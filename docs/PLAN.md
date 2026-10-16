@@ -100,10 +100,14 @@ Every phase ends in a public artifact. No phase starts until the previous gate p
 Phases 1 and 2 can overlap.
 
 ### Phase 1 · Artemis I
-- [x] Reimplement a GPT from an empty file (Zero to Hero), then upgrade with RoPE, RMSNorm, SwiGLU.
-- [ ] Train a BPE tokenizer on FineWeb-Edu + NASA text; compare aerospace splits vs a stock tokenizer.
+- [x] Reimplement a GPT from an empty file (Zero to Hero), then upgrade with RoPE, RMSNorm, SwiGLU
+      (later ReLU², with Muon and QK norm, adopted from nanochat in Stage 4).
+- [x] Train a BPE tokenizer on FineWeb-Edu + NASA text; compare aerospace splits vs a stock tokenizer.
 - [ ] Reproduce a small-depth nanochat run, swap in your own model code, match its loss curve.
+      Partly: nanochat reproduced and trained on our data, then its ideas brought into our
+      model one at a time, compared in bits per byte. Not matched (Flight Log Steps 16-32).
 - [ ] Final run mixing general text with the NASA corpus. Publish curves and writeup 1.
+      Run and curves done (Steps 33-34); writeup 1 next.
 
 ### Phase 2 · Corpus and FLIGHT-Bench v1
 - [ ] NTRS harvester and license log.
@@ -150,19 +154,19 @@ benchmark, validate any LLM judge against your own grades on 50 items.
 
 ## Compute and budget
 
-Roughly $400 to $800 of rented GPU time if development stays small. H100s run about $2 to
+Roughly $200 to $550 of rented GPU time if development stays small (Artemis I needed none). H100s run about $2 to
 $4 per GPU-hour (Lambda, RunPod, Vast.ai). Set a hard spend alert before the first run.
 
 | Phase | Workload | Hardware | Rough cost |
 |---|---|---|---|
-| 1. Artemis I | Debug runs, then one speedrun-style run (nanochat ref ≈ $100) | Local GTX 1080 for debugging; 8xH100 for 3 to 4 h | $100 to $200 |
+| 1. Artemis I | Debug runs, then the final run (Flight Log Step 33: 67 min) | Local GTX 1080 only (owner's choice: no cloud run) | $0 |
 | 2. Data | Extraction and cleaning | CPU, optionally 1 GPU | $0 to $50 |
 | 3. Artemis II | CPT + QLoRA SFT, DPO, GRPO on 4B to 9B | 1x H100 (local 1080 is too small) | $150 to $400 |
 | 4 to 5. Consoles, evals | Benchmark inference, frontier API calls | 1 GPU + API credits | $50 to $100 |
 | 6. Demo | Quantized model behind a small API | Small GPU or CPU with GGUF | $0 to $30/mo |
 
-**Local hardware:** GTX 1080, 8 GB, Pascal (compute 6.1). Good for writing and debugging
-Artemis I at tiny scale in fp32. No bf16, no `torch.compile`/Triton, too small for 4B+
+**Local hardware:** GTX 1080, 8 GB, Pascal (compute 6.1). Artemis I was written, debugged
+and trained on it, in fp32. No bf16, no `torch.compile`/Triton, too small for 4B+
 fine-tuning, so Phase 3 runs in the cloud.
 
 ## Showcase strategy

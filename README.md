@@ -15,9 +15,9 @@ When the consoles disagree, Artemis says so instead of guessing.
 | Phase 1 stage | State |
 |---|---|
 | Stage 1: a GPT from an empty file | Done |
-| Stage 2: modern upgrades (RMSNorm, RoPE, batched heads, SwiGLU, no biases) | Done |
+| Stage 2: modern upgrades (RMSNorm, RoPE, batched heads, SwiGLU, no biases) | Done (SwiGLU later swapped for ReLU², Stage 4) |
 | Stage 3: BPE tokenizer | Done |
-| Stage 4: real training run, tag `artemis-i` | In work |
+| Stage 4: real training run, tag `artemis-i` | Final run trained locally; writeup and tag next |
 
 Step-by-step checklist: [pretrain/README.md](pretrain/README.md). Every step, with its
 measurements: [docs/FLIGHT_LOG.md](docs/FLIGHT_LOG.md). Full plan: [docs/PLAN.md](docs/PLAN.md).
