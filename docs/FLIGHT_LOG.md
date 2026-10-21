@@ -1068,3 +1068,17 @@ always be traced back to the code that produced them.
 **Measurements:** none new (1.367 bits per byte, Step 33).
 **Anomalies:** None.
 **Next:** Phase 2: the NTRS harvester.
+
+## 2026-10-21 · Phase 2 · Stage 1 · Step 1: Read one NTRS record
+**Objective:** See what NTRS tells us about a report before downloading anything.
+**What I did:** `data/ntrs.py`: `fetch_record` gets one report's JSON record from
+`https://ntrs.nasa.gov/api/citations/<id>`; `summarize` keeps the 10 fields the harvester
+needs (title, authors, date, type, center, distribution, copyright fields, files) out of
+the 28 top-level fields. Tried on NTRS 20205009024, "Automating Test Consistency".
+**What I learned:** Copyright is recorded per report: this one is not a US government work
+(`belongsToUsGov: false`; written under a University of Florida grant), so the usual
+"NASA work, public domain" basis doesn't apply. Its license decision needs the author's
+permission. NTRS also serves a ready-made `.txt` full text next to each file.
+**Measurements:** none (one record read). 190 tests pass.
+**Anomalies:** None.
+**Next:** Search NTRS for many records at once.
