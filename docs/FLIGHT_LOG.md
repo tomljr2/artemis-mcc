@@ -1058,3 +1058,13 @@ stages existed), so the writeup names those entries by title instead.
 **Measurements:** none new. 188 tests pass.
 **Anomalies:** None.
 **Next:** Tag `artemis-i`.
+
+## 2026-10-20 · Phase 1 · Stage 4 · Step 37: Release Artemis I
+**Objective:** Mark the exact version behind the Artemis I result, and close Phase 1.
+**What I did:** Annotated tag `artemis-i` on commit `06c98b2` (writeup 1), pushed to GitHub.
+`git checkout artemis-i` gives the code, docs and recipe as Phase 1 ended.
+**What I learned:** A branch moves; a tag stays put. Results quoted in the writeup can
+always be traced back to the code that produced them.
+**Measurements:** none new (1.367 bits per byte, Step 33).
+**Anomalies:** None.
+**Next:** Phase 2: the NTRS harvester.
