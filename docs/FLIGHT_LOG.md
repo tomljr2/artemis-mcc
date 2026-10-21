@@ -1045,3 +1045,16 @@ its steps on NASA text.
 **Measurements:** none (docs only). 188 tests pass.
 **Anomalies:** None.
 **Next:** Writeup 1.
+
+## 2026-10-16 · Phase 1 · Stage 4 · Step 36: Writeup 1
+**Objective:** Tell the Artemis I story in one readable page.
+**What I did:** `docs/writeups/01_artemis_i.md`: the result (with the curves and a
+sample), how each stage was built, five lessons, the comparison with nanochat, limits,
+and the commands to reproduce it. Linked from the README. Its numbers come from
+`score_bpb` and the Flight Log (owner's call: the README rule about numbers from `eval/`
+covers FLIGHT-Bench claims). Each number was checked against its Flight Log entry.
+**What I learned:** The Flight Log reuses step numbers (Stages 1-2 were numbered before
+stages existed), so the writeup names those entries by title instead.
+**Measurements:** none new. 188 tests pass.
+**Anomalies:** None.
+**Next:** Tag `artemis-i`.

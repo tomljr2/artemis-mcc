@@ -21,6 +21,7 @@ When the consoles disagree, Artemis says so instead of guessing.
 
 Step-by-step checklist: [pretrain/README.md](pretrain/README.md). Every step, with its
 measurements: [docs/FLIGHT_LOG.md](docs/FLIGHT_LOG.md). Full plan: [docs/PLAN.md](docs/PLAN.md).
+Artemis I, start to finish: [writeup 1](docs/writeups/01_artemis_i.md).
 
 ## Mission control architecture
 
