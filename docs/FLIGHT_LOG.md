@@ -1082,3 +1082,20 @@ permission. NTRS also serves a ready-made `.txt` full text next to each file.
 **Measurements:** none (one record read). 190 tests pass.
 **Anomalies:** None.
 **Next:** Search NTRS for many records at once.
+
+## 2026-10-21 · Phase 2 · Stage 1 · Step 2: Search NTRS
+**Objective:** Fetch many records at once and see what their rights fields say.
+**What I did:** `search(query, page_size, start)` in `data/ntrs.py` reads one page of
+`/api/citations/search` (records shaped like a single fetch, so `summarize` works on them).
+`python -m data.ntrs --search apollo` tallies the first 100. `summarize` now copes with
+records whose `copyright` or `center` is null.
+**What I learned:** "apollo" matches 8,567 reports. Of the first 100: all `PUBLIC`;
+copyright determination GOV_PUBLIC_USE_PERMITTED 49, OTHER 40, PUBLIC_USE_PERMITTED 8,
+MAY_INCLUDE_COPYRIGHT_MATERIAL 2, GOV_PERMITTED 1. `belongsToUsGov` was false (98) or
+missing (2) for all of them, 1960s NASA reports included, so it can't tell government
+works apart. Correction to Step 1: that field is not evidence that 20205009024 is a
+non-government work (its grantee affiliation is). Only 26 of the 100 list any files,
+though the 3 file-less ones checked say `downloadsAvailable: true`.
+**Measurements:** counts above (first 100 "apollo" matches). 192 tests pass.
+**Anomalies:** Records with `downloadsAvailable: true` but an empty `downloads` list.
+**Next:** Find where those reports' files are.
