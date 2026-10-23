@@ -4,7 +4,7 @@ NTRS (https://ntrs.nasa.gov) holds NASA's technical reports. Each report has a p
 JSON record: title, authors, date, and the fields that say who owns it and whether it
 may be shared. The harvester will decide from these records which reports to download.
 
-Run:  python -m data.ntrs 20205009024        # one report
+Run:  python -m data.ntrs 19670009662        # one report
       python -m data.ntrs --search apollo     # tally the first 100 matches
 """
 
@@ -62,7 +62,7 @@ def summarize(record: dict) -> dict:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("ntrs_id", type=int, nargs="?", help="a report's NTRS id, e.g. 20205009024")
+    parser.add_argument("ntrs_id", type=int, nargs="?", help="a report's NTRS id, e.g. 19670009662")
     parser.add_argument(
         "--search", help="search words; tallies the rights fields of the first page"
     )

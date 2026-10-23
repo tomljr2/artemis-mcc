@@ -1099,3 +1099,14 @@ though the 3 file-less ones checked say `downloadsAvailable: true`.
 **Measurements:** counts above (first 100 "apollo" matches). 192 tests pass.
 **Anomalies:** Records with `downloadsAvailable: true` but an empty `downloads` list.
 **Next:** Find where those reports' files are.
+
+## 2026-10-22 · Phase 2 · Stage 1 · Step 3: Leave out NTRS 20205009024
+**Objective:** Apply the owner's decision not to use their own report, since its rights are unclear.
+**What I did:** License log row `ntrs-20205009024`: `exclude` (NTRS marks it GOV_PERMITTED,
+use by or for the US government; who holds the rights is unclear). The example and test
+record in `data/ntrs.py` are now NTRS 19670009662, "Apollo Systems" (Goddard, GOV_PUBLIC_USE_PERMITTED).
+**What I learned:** An `exclude` row is a decision too: it stops the harvester from
+picking the report up later by accident.
+**Measurements:** none. 192 tests pass.
+**Anomalies:** None.
+**Next:** Find where file-less reports' files are.
