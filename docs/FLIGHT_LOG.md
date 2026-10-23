@@ -1110,3 +1110,18 @@ picking the report up later by accident.
 **Measurements:** none. 192 tests pass.
 **Anomalies:** None.
 **Next:** Find where file-less reports' files are.
+
+## 2026-10-23 · Phase 2 · Stage 1 · Step 4: Where file-less reports' text is
+**Objective:** Explain why 74 of the first 100 "apollo" records list no files.
+**What I did:** `summarize` now keeps `disseminated` and `part_of` (the id of the bigger
+document a record belongs to, from its `related` list). Both are in the `--search` tally.
+**What I learned:** `disseminated` matches the files exactly: DOCUMENT_AND_METADATA 26
+(all with files), METADATA_ONLY 74 (none). `downloadsAvailable: true` doesn't mean a file
+exists. Of the 74 file-less records, 28 are chapters or papers inside a bigger document;
+all 9 of those parent documents have a file (e.g. "Apollo network" is a chapter of
+"Apollo Systems"). The other 46 are catalogue cards only. Guessing a PDF address for a
+file-less record returns 404.
+**Measurements:** counts above (first 100 "apollo" matches; NTRS now reports 8,566
+matches, one fewer than on 2026-10-21). 193 tests pass.
+**Anomalies:** None.
+**Next:** Walk every page of a search, not just the first 100.

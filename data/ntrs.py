@@ -57,6 +57,18 @@ def summarize(record: dict) -> dict:
         "us_gov_work": rights.get("belongsToUsGov"),
         "copyright_determination": rights.get("determinationType"),
         "files": [d["name"] for d in record.get("downloads", [])],
+        # METADATA_ONLY: a catalogue card with no file of its own.
+        "disseminated": record.get("disseminated"),
+        # A chapter or paper inside a bigger document (proceedings, report): its text is
+        # in the parent's file.
+        "part_of": next(
+            (
+                r["id"]
+                for r in record.get("related") or []
+                if r.get("type") == "ANALYTIC_PRIMARY" and r.get("id")
+            ),
+            None,
+        ),
     }
 
 
@@ -71,9 +83,10 @@ def main() -> None:
         total, records = search(args.search)
         summaries = [summarize(r) for r in records]
         print(f"{total:,} matches for {args.search!r}; tallying the first {len(summaries)}")
-        for key in ("distribution", "copyright_determination", "us_gov_work"):
+        for key in ("distribution", "copyright_determination", "us_gov_work", "disseminated"):
             print(f"{key:24} {dict(Counter(s[key] for s in summaries).most_common())}")
         print(f"{'has files':24} {sum(bool(s['files']) for s in summaries)} of {len(summaries)}")
+        print(f"{'part of a bigger doc':24} {sum(bool(s['part_of']) for s in summaries)}")
     elif args.ntrs_id:
         for key, value in summarize(fetch_record(args.ntrs_id)).items():
             print(f"{key:24} {value}")
