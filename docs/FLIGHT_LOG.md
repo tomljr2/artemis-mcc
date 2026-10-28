@@ -1176,3 +1176,19 @@ characters, 8,155 vs 8,494 words of 2+ letters (NTRS / pypdf).
 **Measurements:** counts above, one report only. 200 tests pass.
 **Anomalies:** None.
 **Next:** Pick ~20 usable reports to benchmark the text extractors on.
+
+## 2026-10-28 · Phase 2 · Stage 1 · Step 8: Pick 20 reports for the extractor benchmark
+**Objective:** A fixed, varied set of PDFs to compare text extractors on.
+**What I did:** `data/extract_benchmark.py` lists 20 NTRS reports. From the first 1,000
+"spacecraft" matches, 298 were usable (293 of them PDFs); grouped by publication decade,
+`random.Random(0)` picked 3 per decade from the 1960s to the 2010s and 2 from the 2020s.
+The list is written out, since search results change. All 20 still have a PDF and an
+`include` rights decision (rechecked one by one).
+**What I learned:** Usable records by decade: 1960s 132, 1970s 26, 1980s 41, 1990s 32,
+2000s 19, 2010s 28, 2020s 7, no year 13. Picking by decade keeps the 1960s from
+dominating. The search topic shows: about half of the 20 are about spacecraft charging and the space environment (judged by title). 92 of the
+298 usable records are Contractor Reports, which NASA marks as government works even
+though contractors generally hold copyright (NASA's notice): open question.
+**Measurements:** counts above. 202 tests pass.
+**Anomalies:** None.
+**Next:** Download the 20 and log a license decision for each.
