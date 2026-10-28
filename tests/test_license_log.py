@@ -1,6 +1,7 @@
 import csv
 from pathlib import Path
 
+from data.extract_benchmark import BENCHMARK
 from data.prepare_fineweb_edu import DATASET_URL as FINEWEB_EDU_URL
 from data.prepare_nasa_books import BOOKS, pdf_url
 from pretrain.prepare_apollo11 import URL as APOLLO11_URL
@@ -40,3 +41,9 @@ def test_every_book_we_prepare_is_logged_as_included():
 def test_the_general_english_text_is_logged_as_included():
     decisions = {row["url"]: row["decision"] for row in read_log()}
     assert decisions.get(FINEWEB_EDU_URL) == "include"
+
+
+def test_every_benchmark_report_is_logged_as_included():
+    decisions = {row["id"]: row["decision"] for row in read_log()}
+    for ntrs_id, _, _ in BENCHMARK:
+        assert decisions.get(f"ntrs-{ntrs_id}") == "include", ntrs_id

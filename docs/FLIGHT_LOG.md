@@ -1192,3 +1192,18 @@ though contractors generally hold copyright (NASA's notice): open question.
 **Measurements:** counts above. 202 tests pass.
 **Anomalies:** None.
 **Next:** Download the 20 and log a license decision for each.
+
+## 2026-10-28 · Phase 2 · Stage 1 · Step 9: Download the 20 and log their licenses
+**Objective:** Fetch the benchmark reports, with a license decision logged for each first.
+**What I did:** `license_row` in `data/ntrs.py` builds a report's license-log row from its
+record (decision, NASA's copyright statement, publisher, center, year);
+`append_license_rows` adds rows not already logged and never changes an existing decision.
+`python -m data.extract_benchmark` logs each of the 20, then downloads it. A new test checks
+every benchmark report has an `include` row.
+**What I learned:** 20 `include` rows added. 122.4 MB of PDFs, from 0.2 MB to 89.6 MB
+(the 8th Spacecraft Charging Technology Conference proceedings, 73% of the total).
+NTRS's text files come to 4.07 MB, about as much as all of Artemis I's NASA text
+(4,344,359 characters), from just these 20 reports.
+**Measurements:** sizes above. 206 tests pass.
+**Anomalies:** None.
+**Next:** Extract text from the 20 with two extractors and compare.

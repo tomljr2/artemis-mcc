@@ -11,6 +11,7 @@ Run:  python -m data.ntrs 19670009662        # one report
 """
 
 import argparse
+import csv
 import json
 import ssl
 import time
@@ -27,6 +28,7 @@ from data.prepare_nasa_books import download
 SITE = "https://ntrs.nasa.gov"
 API_URL = f"{SITE}/api/citations"
 RAW_DIR = Path("data/raw/ntrs")
+LICENSE_LOG = Path("data/license_log.csv")
 
 # What each copyright determination means for us; reasons in data/README.md.
 RIGHTS_RULE = {
@@ -37,6 +39,10 @@ RIGHTS_RULE = {
     "NO_PERMISSION": "exclude",
     "OTHER": "exclude",
 }
+
+
+# NASA's own wording for the one value we include (from the NTRS web app).
+GOV_WORK_LABEL = "Work of the US Gov. Public Use Permitted."
 
 
 def rights_decision(determination: str | None) -> str:
@@ -141,6 +147,45 @@ def download_report(record: dict, raw_dir: Path = RAW_DIR) -> list[Path]:
             download(url, path)
             saved.append(path)
     return saved
+
+
+def license_row(record: dict, retrieved: str) -> dict:
+    """The license-log row for one NTRS report: our decision and NASA's words behind it."""
+    determination = (record.get("copyright") or {}).get("determinationType")
+    decision = rights_decision(determination)
+    publication = (record.get("publications") or [{}])[0]
+    year = (publication.get("publicationDate") or "")[:4]
+    center = (record.get("center") or {}).get("name")
+    publisher = ", ".join(
+        part for part in (publication.get("publisher") or "NASA", center, year) if part
+    )
+    if decision == "include":
+        basis = (
+            f"NTRS copyright statement: '{GOV_WORK_LABEL}' A US government work (17 U.S.C. 105)."
+        )
+    else:
+        basis = f"NTRS copyright determination {determination}: excluded by the rights rule."
+    return {
+        "id": f"ntrs-{record['id']}",
+        "title": record["title"],
+        "url": f"{SITE}/citations/{record['id']}",
+        "publisher": f"{publisher} (NTRS {record['id']})",
+        "retrieved": retrieved,
+        "decision": decision,
+        "basis": basis,
+        "notes": "Rule in data/README.md. Quoted material and figures may have other owners.",
+    }
+
+
+def append_license_rows(rows: list[dict], log: Path = LICENSE_LOG) -> int:
+    """Add rows whose id isn't in the log yet; never change a decision already made."""
+    with log.open(encoding="utf-8", newline="") as f:
+        reader = csv.DictReader(f)
+        fields, logged = reader.fieldnames, {row["id"] for row in reader}
+    new = [row for row in rows if row["id"] not in logged]
+    with log.open("a", encoding="utf-8", newline="") as f:
+        csv.DictWriter(f, fields, lineterminator="\n").writerows(new)
+    return len(new)
 
 
 def main() -> None:

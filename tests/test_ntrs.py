@@ -1,8 +1,10 @@
 import pytest
 
 from data.ntrs import (
+    append_license_rows,
     download_report,
     file_links,
+    license_row,
     rights_decision,
     search_all,
     search_url,
@@ -137,3 +139,27 @@ def test_excluded_reports_are_never_downloaded(tmp_path):
     with pytest.raises(PermissionError):
         download_report(record, tmp_path)
     assert not any(tmp_path.iterdir())
+
+
+def test_license_row_records_the_decision_and_nasas_words():
+    record = {**RECORD, "publications": [{"publisher": "NASA", "publicationDate": "1966-06-01"}]}
+    row = license_row(record, "2026-10-28")
+    assert row["id"] == "ntrs-19670009662"
+    assert row["url"] == "https://ntrs.nasa.gov/citations/19670009662"
+    assert row["publisher"] == "NASA, Goddard Space Flight Center, 1966 (NTRS 19670009662)"
+    assert row["decision"] == "include"
+    assert "Work of the US Gov. Public Use Permitted." in row["basis"]
+
+
+def test_license_row_for_an_excluded_report_says_so():
+    record = {**RECORD, "copyright": {"determinationType": "GOV_PERMITTED"}}
+    row = license_row(record, "2026-10-28")
+    assert row["decision"] == "exclude" and "GOV_PERMITTED" in row["basis"]
+
+
+def test_rows_already_in_the_log_are_left_alone(tmp_path):
+    log = tmp_path / "log.csv"
+    log.write_text("id,decision\nntrs-1,exclude\n", encoding="utf-8")
+    rows = [{"id": "ntrs-1", "decision": "include"}, {"id": "ntrs-2", "decision": "include"}]
+    assert append_license_rows(rows, log) == 1
+    assert log.read_text(encoding="utf-8") == "id,decision\nntrs-1,exclude\nntrs-2,include\n"

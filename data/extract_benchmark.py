@@ -6,7 +6,14 @@ per decade from the 1960s to the 2010s and 2 from the 2020s. Spread over decades
 the PDFs change with them: typewriter scans in the 1960s, typeset documents later.
 
 The list is written out rather than re-chosen, because NTRS search results change over time.
+
+Run:  python -m data.extract_benchmark    # log a license decision for each, then download
 """
+
+import datetime
+import time
+
+from data.ntrs import append_license_rows, download_report, fetch_record, license_row
 
 # (NTRS id, publication year, title)
 BENCHMARK = [
@@ -31,3 +38,18 @@ BENCHMARK = [
     (20260000457, 2026, "NASA Spacecraft Conjunction Assessment and Collision Avoidance"),
     (20240007574, 2024, "Spacecraft Priming Analysis and Research Test Apparatus: Number 1"),
 ]
+
+
+def main() -> None:
+    today = datetime.datetime.now(datetime.UTC).date().isoformat()
+    for i, (ntrs_id, _, title) in enumerate(BENCHMARK):
+        if i:
+            time.sleep(1)  # one request at a time, with a gap
+        record = fetch_record(ntrs_id)
+        append_license_rows([license_row(record, today)])  # decide first, then download
+        size = sum(path.stat().st_size for path in download_report(record))
+        print(f"{ntrs_id}  {size / 1e6:6.1f} MB  {title}")
+
+
+if __name__ == "__main__":
+    main()
