@@ -1144,3 +1144,20 @@ a 1 s pause between requests, until it has every match (or the results run out e
 **Measurements:** counts above. 196 tests pass.
 **Anomalies:** 59 records say DOCUMENT_AND_METADATA but list no files (not yet looked at).
 **Next:** Find out what NASA says each copyright determination means.
+
+## 2026-10-28 · Phase 2 · Stage 1 · Step 6: The NTRS rights rule
+**Objective:** Decide, from NASA's own words, which copyright determinations we can use.
+**What I did:** Found NASA's label for each value in the NTRS web app, and what they mean in
+NASA STI's Disclaimers, Copyright Notice, and Terms of Use. Wrote the rule into
+`data/README.md` and `RIGHTS_RULE` / `rights_decision` in `data/ntrs.py`: include only
+GOV_PUBLIC_USE_PERMITTED ("Work of the US Gov. Public Use Permitted."); exclude everything
+else, including any value we haven't seen. `--search` now prints a "usable" count.
+**What I learned:** NASA says contractors and grantees generally own the copyright in work
+they do for NASA, and that NASA's permission to release such work "does not necessarily
+transfer to others". So PUBLIC_USE_PERMITTED is excluded for now. NASA's harvesting page
+asks that harvested data cite "NASA STI Compliance and Distribution Services", and offers
+bulk metadata files, one per publication year.
+**Measurements:** under this rule, 3,012 of the 8,566 "apollo" matches are usable (files +
+include; from Step 5's counts). 198 tests pass.
+**Anomalies:** None.
+**Next:** Download one usable report's text.

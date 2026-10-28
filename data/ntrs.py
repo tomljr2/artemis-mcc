@@ -22,6 +22,21 @@ import certifi
 
 API_URL = "https://ntrs.nasa.gov/api/citations"
 
+# What each copyright determination means for us; reasons in data/README.md.
+RIGHTS_RULE = {
+    "GOV_PUBLIC_USE_PERMITTED": "include",  # a US government work: no US copyright
+    "PUBLIC_USE_PERMITTED": "exclude",  # someone else owns it; reuse terms unclear
+    "MAY_INCLUDE_COPYRIGHT_MATERIAL": "exclude",
+    "GOV_PERMITTED": "exclude",  # government use only
+    "NO_PERMISSION": "exclude",
+    "OTHER": "exclude",
+}
+
+
+def rights_decision(determination: str | None) -> str:
+    """include or exclude, by RIGHTS_RULE. Anything new or missing is excluded."""
+    return RIGHTS_RULE.get(determination, "exclude")
+
 
 def get_json(url: str) -> dict:
     context = ssl.create_default_context(cafile=certifi.where())
@@ -122,6 +137,11 @@ def main() -> None:
         print(f"{'part of a bigger doc':24} {sum(bool(s['part_of']) for s in summaries)}")
         with_files = Counter(s["copyright_determination"] for s in summaries if s["files"])
         print(f"{'rights, if has files':24} {dict(with_files.most_common())}")
+        usable = sum(
+            bool(s["files"]) and rights_decision(s["copyright_determination"]) == "include"
+            for s in summaries
+        )
+        print(f"{'usable (files + include)':24} {usable:,}")
     elif args.ntrs_id:
         for key, value in summarize(fetch_record(args.ntrs_id)).items():
             print(f"{key:24} {value}")

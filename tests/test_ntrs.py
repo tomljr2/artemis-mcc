@@ -1,4 +1,4 @@
-from data.ntrs import search_all, search_url, summarize
+from data.ntrs import rights_decision, search_all, search_url, summarize
 
 # A cut-down copy of a real record (NTRS 19670009662), so the test needs no network.
 RECORD = {
@@ -90,3 +90,15 @@ def test_search_all_stops_if_the_results_run_out_early():
         return 10, [{"id": 0}, {"id": 1}] if start == 0 else []
 
     assert len(list(search_all("apollo", page_size=2, pause=0, search_page=shrinking))) == 2
+
+
+def test_only_us_government_works_are_included():
+    assert rights_decision("GOV_PUBLIC_USE_PERMITTED") == "include"
+    for other in ("PUBLIC_USE_PERMITTED", "MAY_INCLUDE_COPYRIGHT_MATERIAL", "GOV_PERMITTED"):
+        assert rights_decision(other) == "exclude"
+
+
+def test_unknown_or_missing_determinations_are_excluded():
+    # If NASA adds a new value, we leave it out until we've read what it means.
+    assert rights_decision("SOMETHING_NEW") == "exclude"
+    assert rights_decision(None) == "exclude"
