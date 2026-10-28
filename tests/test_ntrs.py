@@ -1,4 +1,4 @@
-from data.ntrs import search_url, summarize
+from data.ntrs import search_all, search_url, summarize
 
 # A cut-down copy of a real record (NTRS 19670009662), so the test needs no network.
 RECORD = {
@@ -43,6 +43,12 @@ def test_null_rights_and_center_do_not_crash():
     assert summary["us_gov_work"] is None and summary["center"] is None
 
 
+def test_author_entries_without_a_name_are_skipped():
+    # Found on a real "apollo" search: an author entry with no name in it.
+    record = {"id": 1, "title": "T", "authorAffiliations": [{"meta": {"author": {}}}, {}]}
+    assert summarize(record)["authors"] == []
+
+
 def test_search_url_asks_for_one_page():
     assert search_url("apollo 11", page_size=100, start=200) == (
         "https://ntrs.nasa.gov/api/citations/search?q=apollo+11&page.size=100&page.from=200"
@@ -64,3 +70,23 @@ def test_a_chapter_points_to_the_document_that_holds_its_text():
     summary = summarize(chapter)
     assert summary["files"] == [] and summary["disseminated"] == "METADATA_ONLY"
     assert summary["part_of"] == 19670009662
+
+
+def test_search_all_walks_every_page_in_order():
+    pages = []
+
+    def fake_page(query, page_size, start):  # 5 matches, served 2 at a time
+        pages.append(start)
+        return 5, [{"id": i} for i in range(start, min(start + page_size, 5))]
+
+    records = list(search_all("apollo", page_size=2, pause=0, search_page=fake_page))
+    assert [r["id"] for r in records] == [0, 1, 2, 3, 4]
+    assert pages == [0, 2, 4]  # three requests, no extra empty one
+
+
+def test_search_all_stops_if_the_results_run_out_early():
+    # NTRS's count can drop while we read (8,567 one day, 8,566 the next).
+    def shrinking(query, page_size, start):
+        return 10, [{"id": 0}, {"id": 1}] if start == 0 else []
+
+    assert len(list(search_all("apollo", page_size=2, pause=0, search_page=shrinking))) == 2

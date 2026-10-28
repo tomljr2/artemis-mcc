@@ -1125,3 +1125,22 @@ file-less record returns 404.
 matches, one fewer than on 2026-10-21). 193 tests pass.
 **Anomalies:** None.
 **Next:** Walk every page of a search, not just the first 100.
+
+## 2026-10-23 · Phase 2 · Stage 1 · Step 5: Walk every page of a search
+**Objective:** Measure a whole search instead of the first 100 matches.
+**What I did:** `search_all` in `data/ntrs.py` reads one page of 100 after another, with
+a 1 s pause between requests, until it has every match (or the results run out early).
+`--search apollo --all` tallies all of them, plus the rights of the records with files.
+`summarize` now skips author entries with no name (found on the full run: it crashed).
+**What I learned:** All 8,566 "apollo" matches, in 3 min 7 s (86 requests):
+- 4,220 have files (49%, not the ~26% the first page suggested). 1,069 are part of a
+  bigger document.
+- Rights of the 4,220 with files: GOV_PUBLIC_USE_PERMITTED 3,012, PUBLIC_USE_PERMITTED 968,
+  MAY_INCLUDE_COPYRIGHT_MATERIAL 191, GOV_PERMITTED 47, OTHER 2. So OTHER (3,182 overall)
+  is almost all catalogue cards.
+- `disseminated` is DOCUMENT_AND_METADATA for 4,279 records, 59 more than have files: it
+  matched the files exactly on the first 100 (Step 4), but not on all of them.
+- `belongsToUsGov` is true for only 2 of 8,566.
+**Measurements:** counts above. 196 tests pass.
+**Anomalies:** 59 records say DOCUMENT_AND_METADATA but list no files (not yet looked at).
+**Next:** Find out what NASA says each copyright determination means.
