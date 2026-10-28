@@ -1161,3 +1161,18 @@ bulk metadata files, one per publication year.
 include; from Step 5's counts). 198 tests pass.
 **Anomalies:** None.
 **Next:** Download one usable report's text.
+
+## 2026-10-28 · Phase 2 · Stage 1 · Step 7: Download one report's text
+**Objective:** Get a usable report's files, and look at NTRS's own text next to the PDF's.
+**What I did:** `download_report` in `data/ntrs.py` saves each file's PDF and NTRS's `.txt`
+under `data/raw/ntrs/<id>/` (git-ignored), and refuses any report `rights_decision`
+excludes. `python -m data.ntrs 19670009662 --download` saved "Apollo Systems": PDF
+1,532,038 bytes (29 pages), text 55,443 bytes.
+**What I learned:** Both texts come from the same scanned page images, so they share the
+same OCR mistakes (stray "1 b rl" from a page mark). They differ in small ways: NTRS's text
+rejoins words split across lines ("dis- play" -> "display") and pypdf's doesn't; NTRS
+spaces out some capitals ("P C M" where pypdf has "PCM"). Totals: 55,439 vs 55,899
+characters, 8,155 vs 8,494 words of 2+ letters (NTRS / pypdf).
+**Measurements:** counts above, one report only. 200 tests pass.
+**Anomalies:** None.
+**Next:** Pick ~20 usable reports to benchmark the text extractors on.

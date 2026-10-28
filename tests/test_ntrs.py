@@ -1,4 +1,13 @@
-from data.ntrs import rights_decision, search_all, search_url, summarize
+import pytest
+
+from data.ntrs import (
+    download_report,
+    file_links,
+    rights_decision,
+    search_all,
+    search_url,
+    summarize,
+)
 
 # A cut-down copy of a real record (NTRS 19670009662), so the test needs no network.
 RECORD = {
@@ -102,3 +111,29 @@ def test_unknown_or_missing_determinations_are_excluded():
     # If NASA adds a new value, we leave it out until we've read what it means.
     assert rights_decision("SOMETHING_NEW") == "exclude"
     assert rights_decision(None) == "exclude"
+
+
+def test_each_file_has_a_pdf_and_a_text_link():
+    record = {
+        "downloads": [
+            {
+                "links": {
+                    "pdf": "/api/citations/19670009662/downloads/19670009662.pdf",
+                    "fulltext": "/api/citations/19670009662/downloads/19670009662.txt",
+                }
+            }
+        ]
+    }
+    assert file_links(record) == [
+        (
+            "https://ntrs.nasa.gov/api/citations/19670009662/downloads/19670009662.pdf",
+            "https://ntrs.nasa.gov/api/citations/19670009662/downloads/19670009662.txt",
+        )
+    ]
+
+
+def test_excluded_reports_are_never_downloaded(tmp_path):
+    record = {"id": 1, "copyright": {"determinationType": "GOV_PERMITTED"}, "downloads": []}
+    with pytest.raises(PermissionError):
+        download_report(record, tmp_path)
+    assert not any(tmp_path.iterdir())

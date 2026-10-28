@@ -7,6 +7,7 @@ may be shared. The harvester will decide from these records which reports to dow
 Run:  python -m data.ntrs 19670009662        # one report
       python -m data.ntrs --search apollo     # tally the first 100 matches
       python -m data.ntrs --search apollo --all   # tally every match (~1 request/s)
+      python -m data.ntrs 19670009662 --download  # save its PDF and NTRS's own text
 """
 
 import argparse
@@ -17,10 +18,15 @@ import urllib.parse
 import urllib.request
 from collections import Counter
 from collections.abc import Callable, Iterator
+from pathlib import Path
 
 import certifi
 
-API_URL = "https://ntrs.nasa.gov/api/citations"
+from data.prepare_nasa_books import download
+
+SITE = "https://ntrs.nasa.gov"
+API_URL = f"{SITE}/api/citations"
+RAW_DIR = Path("data/raw/ntrs")
 
 # What each copyright determination means for us; reasons in data/README.md.
 RIGHTS_RULE = {
@@ -115,6 +121,28 @@ def summarize(record: dict) -> dict:
     }
 
 
+def file_links(record: dict) -> list[tuple[str, str]]:
+    """(PDF url, text url) for each file. NTRS makes its own text of every file it holds."""
+    return [
+        (SITE + d["links"]["pdf"], SITE + d["links"]["fulltext"])
+        for d in record.get("downloads") or []
+    ]
+
+
+def download_report(record: dict, raw_dir: Path = RAW_DIR) -> list[Path]:
+    """Save a report's PDFs and NTRS texts under raw_dir/<id>/, if the rights rule allows."""
+    determination = (record.get("copyright") or {}).get("determinationType")
+    if rights_decision(determination) != "include":
+        raise PermissionError(f"NTRS {record['id']}: {determination} is excluded (data/README.md)")
+    saved = []
+    for pdf_url, text_url in file_links(record):
+        for url in (pdf_url, text_url):
+            path = raw_dir / str(record["id"]) / urllib.parse.unquote(url.rsplit("/", 1)[1])
+            download(url, path)
+            saved.append(path)
+    return saved
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("ntrs_id", type=int, nargs="?", help="a report's NTRS id, e.g. 19670009662")
@@ -122,6 +150,7 @@ def main() -> None:
         "--search", help="search words; tallies the rights fields of the first page"
     )
     parser.add_argument("--all", action="store_true", help="with --search: every page")
+    parser.add_argument("--download", action="store_true", help="with an id: save its files")
     args = parser.parse_args()
     if args.search:
         if args.all:
@@ -142,6 +171,9 @@ def main() -> None:
             for s in summaries
         )
         print(f"{'usable (files + include)':24} {usable:,}")
+    elif args.ntrs_id and args.download:
+        for path in download_report(fetch_record(args.ntrs_id)):
+            print(f"{path}  {path.stat().st_size:,} bytes")
     elif args.ntrs_id:
         for key, value in summarize(fetch_record(args.ntrs_id)).items():
             print(f"{key:24} {value}")
