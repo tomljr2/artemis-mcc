@@ -30,7 +30,8 @@ REF_CHARS = 50_000_000
 MIN_COUNT = 3
 
 WORD = re.compile(r"[A-Za-z]+")
-BROKEN = re.compile(r"[A-Za-z]-[ \t]*\n[ \t]*[a-z]")  # "dis-" at a line end, "play" next
+# "dis-" at a line end, "play" on the next line, maybe with blank lines between
+BROKEN = re.compile(r"[A-Za-z]-[ \t]*\n\s*[a-z]")
 
 
 def load_vocab(
@@ -51,6 +52,28 @@ def text_stats(text: str, vocab: set[str]) -> dict:
         "broken": len(BROKEN.findall(text)),
         "known": sum(w in vocab for w in words) / len(words) if words else 0.0,
     }
+
+
+SPLIT = re.compile(r"([A-Za-z]+)-[ \t]*\n\s*([a-z]+)")  # the two halves of a broken word
+
+
+def line_break_fates(pypdf: str, ntrs: str, vocab: set[str]) -> tuple[Counter, list[str]]:
+    """How NTRS wrote each word pypdf left broken across a line.
+
+    Fates: "joined" (dis-/play -> display), "hyphen" (high-/voltage -> high-voltage),
+    "both" (each form appears somewhere), "neither". Also returns the suspect joins: joined
+    words that aren't in vocab although both halves are ("highvoltage"), likely joined wrongly.
+    """
+    fates, suspects = Counter(), []
+    for left, right in SPLIT.findall(pypdf):
+        joined = re.search(rf"\b{left}{right}\b", ntrs) is not None
+        hyphen = re.search(rf"\b{left}-{right}\b", ntrs) is not None
+        fate = {(True, False): "joined", (False, True): "hyphen", (True, True): "both"}
+        fates[fate.get((joined, hyphen), "neither")] += 1
+        whole, halves = (left + right).lower(), (left.lower(), right.lower())
+        if joined and not hyphen and whole not in vocab and all(h in vocab for h in halves):
+            suspects.append(left + right)
+    return fates, suspects
 
 
 def ntrs_text(raw: str) -> str:
@@ -74,6 +97,7 @@ def main() -> None:
         f"{'NTRS id':12} {'year':>4}  {'chars ntrs / pypdf':>21}  {'broken':>13}  {'known':>11}  {'pypdf s':>7}"
     )
     totals = {"ntrs": Counter(), "pypdf": Counter()}
+    fates, suspects = Counter(), []
     for ntrs_id, year, _ in BENCHMARK:
         folder = RAW_DIR / str(ntrs_id)
         pdf = next(folder.glob("*.pdf"))
@@ -86,6 +110,9 @@ def main() -> None:
         }
         seconds = time.perf_counter() - start
         stats = {name: text_stats(text, vocab) for name, text in texts.items()}
+        report_fates, report_suspects = line_break_fates(texts["pypdf"], texts["ntrs"], vocab)
+        fates.update(report_fates)
+        suspects += report_suspects
         for name, s in stats.items():
             totals[name].update(
                 {
@@ -105,6 +132,8 @@ def main() -> None:
         print(
             f"{name:6} chars {t['chars']:>11,}  broken {t['broken']:>6,}  known {t['known_words'] / t['words']:.3f}"
         )
+    print(f"\nwords pypdf broke, as NTRS wrote them: {dict(fates.most_common())}")
+    print(f"suspect joins ({len(suspects)}): {', '.join(suspects)}")
 
 
 if __name__ == "__main__":

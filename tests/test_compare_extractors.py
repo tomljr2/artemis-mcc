@@ -1,4 +1,4 @@
-from data.compare_extractors import load_vocab, ntrs_text, text_stats
+from data.compare_extractors import line_break_fates, load_vocab, ntrs_text, text_stats
 
 
 def test_words_split_across_a_line_are_counted():
@@ -36,3 +36,17 @@ def test_xhtml_from_ntrs_becomes_plain_text():
 def test_plain_ntrs_text_is_left_alone():
     plain = "NASA TECHNICAL MEMORANDUM\n<P is a typo in a scan"
     assert ntrs_text(plain) == plain
+
+
+def test_line_break_fates_and_suspect_joins():
+    pypdf = "the dis-\nplay of high-\nvoltage parts and a well-\nknown sub-\nsystem"
+    ntrs = "the display of highvoltage parts and a well-known sub system"
+    vocab = {"display", "dis", "play", "high", "voltage", "well", "known", "sub", "system"}
+    fates, suspects = line_break_fates(pypdf, ntrs, vocab)
+    assert fates == {"joined": 2, "hyphen": 1, "neither": 1}
+    assert suspects == ["highvoltage"]  # "display" is a real word, so it isn't suspect
+
+
+def test_a_word_broken_around_a_blank_line_still_counts():
+    # Found in NTRS's text of a 1977 scan: "Satel-", a blank line, then "lite".
+    assert text_stats("the Satel-\n\nlite was almost lost", set())["broken"] == 1

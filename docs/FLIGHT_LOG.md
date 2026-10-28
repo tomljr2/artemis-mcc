@@ -1227,3 +1227,25 @@ amounts are within 0.3%. The clear difference is broken words: NTRS rejoins them
 **Anomalies:** NTRS text format varies (plain or XHTML). Whether NTRS also wrongly joins
 real hyphenated words at line ends is not measured.
 **Next:** Read samples side by side to check what the numbers can't.
+
+## 2026-10-28 · Phase 2 · Stage 1 · Step 11: Check NTRS's line-break joins
+**Objective:** Check what the Step 10 numbers couldn't: how NTRS rejoins broken words, and
+whether it joins some wrongly.
+**What I did:** `line_break_fates` in `data/compare_extractors.py` takes each word pypdf left
+broken across a line and finds how NTRS wrote it. A "suspect join" is a joined word not in
+the reference list although both halves are ("highvoltage").
+**What I learned:**
+- Correction to Step 10: NTRS's text does have broken words. Reading a 1977 sample showed
+  "Satel-", a blank line, then "lite"; the pattern only allowed one line break. Fixed, NTRS
+  has 158 broken words, not 0 (pypdf still 1,106).
+- Of pypdf's 1,106 broken words, NTRS wrote 747 joined, 55 hyphenated, 203 both ways in the
+  same report, and 101 neither (OCR differences).
+- 79 suspect joins. Read by hand, 25 are real words the list lacks (translunar,
+  nanoseconds, subroutines x3) and 54 are wrong joins of a real hyphen (highvoltage,
+  peerreviewed, selfprotection). So NTRS rejoins most split words but drops a real hyphen
+  in at least 54 cases, about 5% of the 1,106.
+- NTRS's text of the 1977 scans also carries lines of OCR junk ("-!.,i'", "_i"); cleaning
+  will need to handle it.
+**Measurements:** counts above; the 54 / 25 split is my reading of the 79 words. 214 tests pass.
+**Anomalies:** None.
+**Next:** Choose the extractor for the harvester.
