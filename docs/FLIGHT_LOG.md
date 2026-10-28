@@ -1207,3 +1207,23 @@ NTRS's text files come to 4.07 MB, about as much as all of Artemis I's NASA text
 **Measurements:** sizes above. 206 tests pass.
 **Anomalies:** None.
 **Next:** Extract text from the 20 with two extractors and compare.
+
+## 2026-10-28 · Phase 2 · Stage 1 · Step 10: Compare two text extractors on the 20
+**Objective:** Measure NTRS's own text against pypdf on the 20 benchmark reports.
+**What I did:** `data/compare_extractors.py` counts, per report and in total: characters,
+words broken across a line ("dis-\nplay"), and the share of 2+ letter words that are
+real (seen 3+ times in the first 50M characters of our FineWeb-Edu training text, 55,561
+words). It also times pypdf.
+**What I learned:** NTRS's text for 2 of the 20 (both 2020s) is XHTML, not plain text:
+`<html>`, a `<head>` of PDF metadata, `<p>` on every line. The first run counted that markup
+as text (NTRS "won" on characters partly through it); `ntrs_text` now strips it. After that:
+| | Characters | Broken words | Real-word share | Time |
+|---|---|---|---|---|
+| NTRS text | 3,983,397 | 0 | 0.959 | none (made by NASA) |
+| pypdf | 3,994,411 | 1,106 | 0.957 | 106 s |
+NTRS has the higher real-word share on 16 of 20 reports, lower on 3, tied on 1. The
+amounts are within 0.3%. The clear difference is broken words: NTRS rejoins them.
+**Measurements:** table above (one run; text extraction has no randomness). 212 tests pass.
+**Anomalies:** NTRS text format varies (plain or XHTML). Whether NTRS also wrongly joins
+real hyphenated words at line ends is not measured.
+**Next:** Read samples side by side to check what the numbers can't.
