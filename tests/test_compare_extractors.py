@@ -1,4 +1,5 @@
-from data.compare_extractors import line_break_fates, load_vocab, ntrs_text, text_stats
+from data.compare_extractors import line_break_fates, load_vocab, text_stats
+from data.ntrs import ntrs_text
 
 
 def test_words_split_across_a_line_are_counted():

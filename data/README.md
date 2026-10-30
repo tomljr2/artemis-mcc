@@ -36,3 +36,21 @@ Harvesting terms ([sti.nasa.gov/harvesting-data-from-ntrs](https://sti.nasa.gov/
 the OpenAPI is NASA's recommended way in, and harvested data should cite **NASA STI
 Compliance and Distribution Services** as its source. NASA also offers bulk metadata files,
 one per publication year (`ntrs-public-metadata-{year}.ndjson`).
+
+## Text extraction
+
+`report_text` in [`ntrs.py`](ntrs.py) uses the text NTRS makes of each file, and falls back
+to [pypdf](https://pypi.org/project/pypdf/) only when NTRS has none. Some NTRS texts are
+XHTML; the markup is stripped. Chosen on the 20 reports in
+[`extract_benchmark.py`](extract_benchmark.py), measured by
+[`compare_extractors.py`](compare_extractors.py) (2026-10-28):
+
+| | Characters | Broken words | Real-word share |
+|---|---|---|---|
+| NTRS text | 3,983,397 | 158 | 0.959 |
+| pypdf | 3,994,411 | 1,106 | 0.957 |
+
+"Broken" means split across a line ("dis-", "play"); "real" means in a 55,561-word list from
+our FineWeb-Edu text. NTRS's text scored higher on real words for 16 of the 20 reports. Its
+cost: it drops a real hyphen in about 54 places (by hand count), e.g. "highvoltage". Both
+carry the scans' OCR errors; cleaning comes next.

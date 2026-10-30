@@ -1249,3 +1249,16 @@ the reference list although both halves are ("highvoltage").
 **Measurements:** counts above; the 54 / 25 split is my reading of the 79 words. 214 tests pass.
 **Anomalies:** None.
 **Next:** Choose the extractor for the harvester.
+
+## 2026-10-28 · Phase 2 · Stage 1 · Step 12: Choose NTRS's text as the extractor
+**Objective:** Put the extractor choice into the harvester and the plan.
+**What I did:** `report_text(id)` in `data/ntrs.py`: for each downloaded PDF, NTRS's text
+with any XHTML stripped, or pypdf's if NTRS has none. `ntrs_text` and `pypdf_text` moved
+there from `compare_extractors.py`. PLAN item ticked; numbers in `data/README.md`.
+**What I learned:** NTRS names its text two ways: "X.txt" for older files and "X.pdf.txt"
+for newer ones. The first version only knew "X.txt" and quietly fell back to pypdf on the
+two 2020s reports; the total gave it away (92,719 characters, pypdf's count). Now it tries
+both, and over the 20 reports it returns 3,983,397 characters, NTRS's total.
+**Measurements:** counts above. 217 tests pass.
+**Anomalies:** None.
+**Next:** Cleaning: start with OCR junk lines.

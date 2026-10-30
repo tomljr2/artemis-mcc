@@ -13,17 +13,13 @@ miss that list too, but they miss it equally for both extractors, so the compari
 Run (after `python -m data.extract_benchmark`):  python -m data.compare_extractors
 """
 
-import html
-import logging
 import re
 import time
 from collections import Counter
 from pathlib import Path
 
-from pypdf import PdfReader
-
 from data.extract_benchmark import BENCHMARK
-from data.ntrs import RAW_DIR
+from data.ntrs import RAW_DIR, ntrs_text, pypdf_text
 
 REF_TEXT = Path("data/processed/fineweb_edu/train.txt")
 REF_CHARS = 50_000_000
@@ -76,21 +72,7 @@ def line_break_fates(pypdf: str, ntrs: str, vocab: set[str]) -> tuple[Counter, l
     return fates, suspects
 
 
-def ntrs_text(raw: str) -> str:
-    """NTRS's text, minus the XHTML wrapping some files come in."""
-    if not raw.lstrip().startswith("<html"):
-        return raw
-    raw = re.sub(r"(?s)<head>.*?</head>", "", raw)  # PDF metadata, not the report
-    raw = re.sub(r"</(?:p|div|h\d|li|tr)>", "\n", raw)  # block ends become line breaks
-    return html.unescape(re.sub(r"<[^>]+>", "", raw))
-
-
-def pypdf_text(pdf: Path) -> str:
-    return "\n".join(page.extract_text() or "" for page in PdfReader(pdf).pages)
-
-
 def main() -> None:
-    logging.getLogger("pypdf").setLevel(logging.ERROR)  # one PDF warns ~250 times
     vocab = load_vocab()
     print(f"reference: {len(vocab):,} words\n")
     print(

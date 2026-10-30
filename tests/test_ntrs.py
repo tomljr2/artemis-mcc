@@ -5,6 +5,7 @@ from data.ntrs import (
     download_report,
     file_links,
     license_row,
+    report_text,
     rights_decision,
     search_all,
     search_url,
@@ -163,3 +164,33 @@ def test_rows_already_in_the_log_are_left_alone(tmp_path):
     rows = [{"id": "ntrs-1", "decision": "include"}, {"id": "ntrs-2", "decision": "include"}]
     assert append_license_rows(rows, log) == 1
     assert log.read_text(encoding="utf-8") == "id,decision\nntrs-1,exclude\nntrs-2,include\n"
+
+
+def test_report_text_prefers_ntrs_text_and_strips_its_markup(tmp_path, monkeypatch):
+    folder = tmp_path / "7"
+    folder.mkdir()
+    (folder / "7.pdf").write_bytes(b"%PDF")
+    (folder / "7.txt").write_text("<html><head>x</head><body><p>Orbit</p></body></html>")
+    monkeypatch.setattr("data.ntrs.pypdf_text", lambda pdf: "from pypdf")
+    assert report_text(7, tmp_path).strip() == "Orbit"
+
+
+def test_report_text_falls_back_to_pypdf_when_ntrs_has_none(tmp_path, monkeypatch):
+    folder = tmp_path / "7"
+    folder.mkdir()
+    (folder / "a.pdf").write_bytes(b"%PDF")  # no text file at all
+    (folder / "b.pdf").write_bytes(b"%PDF")
+    (folder / "b.txt").write_text("  \n")  # an empty one
+    monkeypatch.setattr("data.ntrs.pypdf_text", lambda pdf: f"pypdf {pdf.stem}")
+    assert report_text(7, tmp_path) == "pypdf a\n\npypdf b"
+
+
+def test_report_text_finds_both_ntrs_text_names(tmp_path, monkeypatch):
+    folder = tmp_path / "7"
+    folder.mkdir()
+    (folder / "7.pdf").write_bytes(b"%PDF")
+    (folder / "7.txt").write_text("old style")  # 19670009662.pdf -> 19670009662.txt
+    (folder / "Report.pdf").write_bytes(b"%PDF")
+    (folder / "Report.pdf.txt").write_text("new style")  # Report.pdf -> Report.pdf.txt
+    monkeypatch.setattr("data.ntrs.pypdf_text", lambda pdf: "from pypdf")
+    assert report_text(7, tmp_path) == "old style\n\nnew style"

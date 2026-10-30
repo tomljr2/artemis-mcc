@@ -12,7 +12,10 @@ Run:  python -m data.ntrs 19670009662        # one report
 
 import argparse
 import csv
+import html
 import json
+import logging
+import re
 import ssl
 import time
 import urllib.parse
@@ -22,6 +25,7 @@ from collections.abc import Callable, Iterator
 from pathlib import Path
 
 import certifi
+from pypdf import PdfReader
 
 from data.prepare_nasa_books import download
 
@@ -147,6 +151,37 @@ def download_report(record: dict, raw_dir: Path = RAW_DIR) -> list[Path]:
             download(url, path)
             saved.append(path)
     return saved
+
+
+def ntrs_text(raw: str) -> str:
+    """NTRS's text, minus the XHTML wrapping some files come in."""
+    if not raw.lstrip().startswith("<html"):
+        return raw
+    raw = re.sub(r"(?s)<head>.*?</head>", "", raw)  # PDF metadata, not the report
+    raw = re.sub(r"</(?:p|div|h\d|li|tr)>", "\n", raw)  # block ends become line breaks
+    return html.unescape(re.sub(r"<[^>]+>", "", raw))
+
+
+def pypdf_text(pdf: Path) -> str:
+    logging.getLogger("pypdf").setLevel(logging.ERROR)  # some PDFs warn hundreds of times
+    return "\n".join(page.extract_text() or "" for page in PdfReader(pdf).pages)
+
+
+def report_text(ntrs_id: int, raw_dir: Path = RAW_DIR) -> str:
+    """A downloaded report's text: NTRS's own where it has some, else pypdf's.
+
+    NTRS's text won the extractor benchmark (Steps 10-11 in the Flight Log): the same amount
+    of text, slightly more real words, 158 words broken across lines against pypdf's 1,106.
+    """
+    parts = []
+    for pdf in sorted((raw_dir / str(ntrs_id)).glob("*.pdf")):
+        # NTRS names its text "X.txt" for older files, "X.pdf.txt" for newer ones.
+        txts = [
+            t for t in (pdf.with_suffix(".txt"), pdf.with_name(pdf.name + ".txt")) if t.exists()
+        ]
+        text = ntrs_text(txts[0].read_text(encoding="utf-8", errors="replace")) if txts else ""
+        parts.append(text if text.strip() else pypdf_text(pdf))
+    return "\n\n".join(parts)
 
 
 def license_row(record: dict, retrieved: str) -> dict:
