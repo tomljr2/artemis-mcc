@@ -54,3 +54,26 @@ XHTML; the markup is stripped. Chosen on the 20 reports in
 our FineWeb-Edu text. NTRS's text scored higher on real words for 16 of the 20 reports. Its
 cost: it drops a real hyphen in about 54 places (by hand count), e.g. "highvoltage". Both
 carry the scans' OCR errors; cleaning comes next.
+
+## Cleaning
+
+[`clean_ntrs.py`](clean_ntrs.py) cleans the report text one rule at a time. Measured on the
+20 benchmark reports (`python -m data.clean_ntrs`, 2026-10-30):
+
+**Junk lines.** A line goes if fewer than half its characters are letters, digits or spaces
+and it has no run of 3+ letters: scanner crumbs ("-;:;,.1_"), lone bullets ("•", the most
+common, 358 times), dashes, symbol-font characters, equation numbers ("(4)"). Lines with a
+word or a number stay, so contents lines and tables are kept.
+
+| Decade | Junk lines | Characters removed | Share |
+|---|---|---|---|
+| 1960s | 429 | 1,367 | 0.74% |
+| 1970s | 385 | 1,604 | 3.26% |
+| 1980s | 1,098 | 4,460 | 1.03% |
+| 1990s | 237 | 2,254 | 3.23% |
+| 2000s | 1,080 | 4,465 | 0.20% |
+| 2010s | 104 | 270 | 0.05% |
+| 2020s | 264 | 1,083 | 0.20% |
+| All | 3,597 | 15,503 | 0.39% |
+
+Junk inside a line ("of the coop_.a'_,:e") is not touched by this rule.

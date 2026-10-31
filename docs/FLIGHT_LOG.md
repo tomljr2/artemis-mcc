@@ -1262,3 +1262,18 @@ both, and over the 20 reports it returns 3,983,397 characters, NTRS's total.
 **Measurements:** counts above. 217 tests pass.
 **Anomalies:** None.
 **Next:** Cleaning: start with OCR junk lines.
+
+## 2026-10-30 · Phase 2 · Stage 1 · Step 13: Drop OCR junk lines
+**Objective:** Measure the junk lines in the 20 reports' text, then remove them.
+**What I did:** Bucketed all 104,361 non-blank lines by their share of letters, digits and
+spaces, and read samples of each bucket. Then `data/clean_ntrs.py`: `is_junk_line` (under
+half letters/digits/spaces and no 3+ letter word) and `drop_junk_lines`; numbers in
+`data/README.md`.
+**What I learned:** Junk lines are a small problem: 3,597 lines, 0.39% of the characters
+(3.3% in the 1970s and 1990s scans, 0.05% in the 2010s). Few letters alone is not junk:
+page numbers, table cells and contents lines ("3.4.6 Development Plan .......") look
+symbol-heavy too, so the rule also needs "no word". The most common junk line is a lone
+bullet "•" (358), split from its item by the extractor.
+**Measurements:** counts above. 220 tests pass.
+**Anomalies:** None.
+**Next:** Look at junk inside lines and single-letter OCR crumbs ("U", "I", "h" alone).
