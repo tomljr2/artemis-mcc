@@ -21,3 +21,10 @@ def test_lines_with_a_word_or_numbers_are_kept():
 def test_blank_lines_are_kept():
     assert not is_junk_line("   ")
     assert drop_junk_lines("Orbit\n-;:,\n\nMoon") == "Orbit\n\nMoon"
+
+
+def test_a_lone_letter_is_junk_but_a_short_word_is_not():
+    for line in ("I", "o", "  a  "):
+        assert is_junk_line(line), line
+    for line in ("at", "I/O", "5"):
+        assert not is_junk_line(line), line

@@ -1277,3 +1277,17 @@ bullet "•" (358), split from its item by the extractor.
 **Measurements:** counts above. 220 tests pass.
 **Anomalies:** None.
 **Next:** Look at junk inside lines and single-letter OCR crumbs ("U", "I", "h" alone).
+
+## 2026-10-31 · Phase 2 · Stage 1 · Step 14: Drop lone-letter lines
+**Objective:** Measure the OCR mess left after Step 13 (junk inside lines, lines of one
+letter) and remove what is clearly noise.
+**What I did:** Counted symbol-heavy words (30%+ symbols, 4+ characters) and one-letter
+lines, with samples and the lines around them. Added rule 2 to `is_junk_line`: a line that
+is one letter alone. Numbers in `data/README.md`.
+**What I learned:** Symbol-heavy words are not junk: 544 of 364,062, nearly all math or
+curly quotes, so no rule for them. The scans' in-line errors are misspelled words, which a
+symbol rule can't see. One-letter lines are noise: 3,269, led by "I" (768) from printed
+rules read as letters. Both rules now drop 6,866 lines, 0.55% of the characters.
+**Measurements:** counts above. 221 tests pass.
+**Anomalies:** None.
+**Next:** Page headers, footers and page numbers repeated on every page.

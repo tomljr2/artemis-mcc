@@ -5,6 +5,10 @@ with no word in them. A line is junk when fewer than half its characters are let
 digits or spaces, and it has no run of 3+ letters. Lines with a word survive, so contents
 lines ("3.4.6 Development Plan ........") and tables of numbers are kept.
 
+Rule 2, lone letters: a line that is one letter and nothing else. In the scans these are
+columns of "I" (printed rules read as letters) and crumbs; in newer reports, letters split
+off equations and rotated table headings.
+
 Run (after `python -m data.extract_benchmark`):  python -m data.clean_ntrs
 """
 
@@ -21,6 +25,8 @@ def is_junk_line(line: str) -> bool:
     s = line.strip()
     if not s:
         return False  # blank lines separate paragraphs; keep them
+    if len(s) == 1 and s.isalpha():
+        return True
     clean = sum(c.isalnum() or c == " " for c in s) / len(s)
     return clean < 0.5 and not WORD3.search(s)
 

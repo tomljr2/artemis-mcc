@@ -65,15 +65,24 @@ and it has no run of 3+ letters: scanner crumbs ("-;:;,.1_"), lone bullets ("•
 common, 358 times), dashes, symbol-font characters, equation numbers ("(4)"). Lines with a
 word or a number stay, so contents lines and tables are kept.
 
-| Decade | Junk lines | Characters removed | Share |
-|---|---|---|---|
-| 1960s | 429 | 1,367 | 0.74% |
-| 1970s | 385 | 1,604 | 3.26% |
-| 1980s | 1,098 | 4,460 | 1.03% |
-| 1990s | 237 | 2,254 | 3.23% |
-| 2000s | 1,080 | 4,465 | 0.20% |
-| 2010s | 104 | 270 | 0.05% |
-| 2020s | 264 | 1,083 | 0.20% |
-| All | 3,597 | 15,503 | 0.39% |
+**Lone letters** (2026-10-31). A line that is one letter alone: 3,269 of them, mostly
+columns of "I" (768; printed rules read as letters) and crumbs, plus letters split off
+equations and rotated table headings ("LOAD", "O", "R").
 
-Junk inside a line ("of the coop_.a'_,:e") is not touched by this rule.
+Both rules together:
+
+| Decade | Lines dropped | Characters removed | Share |
+|---|---|---|---|
+| 1960s | 1,351 | 3,211 | 1.75% |
+| 1970s | 552 | 1,938 | 3.94% |
+| 1980s | 2,201 | 6,666 | 1.55% |
+| 1990s | 353 | 2,486 | 3.56% |
+| 2000s | 1,554 | 5,413 | 0.25% |
+| 2010s | 117 | 296 | 0.06% |
+| 2020s | 738 | 2,056 | 0.38% |
+| All | 6,866 | 22,066 | 0.55% |
+
+Junk inside a line ("of the coop_.a'_,:e") is not touched. A rule for symbol-heavy words
+was tried and dropped: of the 544 found (in 364,062 words of 4+ characters), nearly all
+were math ("erf(𝑦+)", "[m**2/s**2]") or curly quotes. Inside lines, the scans' errors are
+misspelled words, not symbols.
