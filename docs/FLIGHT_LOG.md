@@ -1291,3 +1291,21 @@ rules read as letters. Both rules now drop 6,866 lines, 0.55% of the characters.
 **Measurements:** counts above. 221 tests pass.
 **Anomalies:** None.
 **Next:** Page headers, footers and page numbers repeated on every page.
+
+## 2026-11-04 · Phase 2 · Stage 1 · Step 15: Drop running headers and footers
+**Objective:** Find and remove the header and footer lines repeated on each page.
+**What I did:** Checked for page breaks in NTRS's text: none in the 18 plain-text reports,
+one `<div class="page">` per page in the 2 XHTML ones. So: counted repeated line shapes
+(numbers as "#") per report against its page count (`page_count` in `data/ntrs.py`).
+Rule 3 in `data/clean_ntrs.py`: drop lines of 2+ words and 10+ characters that come back
+at least once every two pages. Numbers in `data/README.md`.
+**What I learned:** Repetition alone catches content: bare numbers (page numbers and table
+cells look the same), program listings ("LOAD", "STO"), and single words, because some
+narrow-column scans come out one word per line ("the" alone 742 times in a 1986 report).
+Requiring two words and a page-rate repeat leaves only headers, plot stamps and chart
+labels: 27,703 characters (0.70%), all from the 2010s-2020s reports. The older scans had
+no running headers the rule could see.
+**Measurements:** counts above. 224 tests pass.
+**Anomalies:** Bare page numbers are not removed; without page breaks they can't be told
+from table cells.
+**Next:** One-word-per-line text in the scans: measure it, then join lines into paragraphs.

@@ -167,6 +167,11 @@ def pypdf_text(pdf: Path) -> str:
     return "\n".join(page.extract_text() or "" for page in PdfReader(pdf).pages)
 
 
+def page_count(ntrs_id: int, raw_dir: Path = RAW_DIR) -> int:
+    """Pages in a downloaded report's PDFs."""
+    return sum(len(PdfReader(pdf).pages) for pdf in (raw_dir / str(ntrs_id)).glob("*.pdf"))
+
+
 def report_text(ntrs_id: int, raw_dir: Path = RAW_DIR) -> str:
     """A downloaded report's text: NTRS's own where it has some, else pypdf's.
 

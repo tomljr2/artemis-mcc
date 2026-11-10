@@ -82,6 +82,25 @@ Both rules together:
 | 2020s | 738 | 2,056 | 0.38% |
 | All | 6,866 | 22,066 | 0.55% |
 
+**Running headers and footers** (2026-11-04). NTRS's plain text has no page breaks (18 of
+the 20 reports), so a header is found by repetition: a line of 2+ words and 10+ characters
+whose shape (numbers as "#") comes back at least once every two pages. Bare page numbers and
+one-word lines are not touched: they repeat just as often as table cells and the one word
+per line of narrow-column scans ("the" alone 742 times in a 1986 report).
+
+| Decade | Characters removed | Share |
+|---|---|---|
+| 1960s-2000s | 0 | 0% |
+| 2010s | 2,571 | 0.49% |
+| 2020s | 25,117 | 4.66% |
+| All | 27,703 | 0.70% |
+
+What it removed, by hand: running headers ("NASA Spacecraft Conjunction Assessment and
+Collision Avoidance", 159 times in 160 pages; "American Institute of Aeronautics and
+Astronautics", 12 in 12), plotting-software stamps ("W inPlot v1.2.3", 59) and repeated
+chart labels ("Major Species Mole Fraction", 8). No prose. (The table's 1 character per
+report in older decades is only the final line break.)
+
 Junk inside a line ("of the coop_.a'_,:e") is not touched. A rule for symbol-heavy words
 was tried and dropped: of the 544 found (in 364,062 words of 4+ characters), nearly all
 were math ("erf(𝑦+)", "[m**2/s**2]") or curly quotes. Inside lines, the scans' errors are

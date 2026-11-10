@@ -1,4 +1,4 @@
-from data.clean_ntrs import drop_junk_lines, is_junk_line
+from data.clean_ntrs import drop_junk_lines, drop_repeated_lines, is_junk_line
 
 
 def test_scanner_crumbs_and_stray_symbols_are_junk():
@@ -28,3 +28,26 @@ def test_a_lone_letter_is_junk_but_a_short_word_is_not():
         assert is_junk_line(line), line
     for line in ("at", "I/O", "5"):
         assert not is_junk_line(line), line
+
+
+def test_a_line_on_every_page_is_dropped_whatever_its_number():
+    # Pages of a 2026 handbook: the same two header lines, then the page's own text.
+    pages = [
+        f"NASA Spacecraft Conjunction Assessment\nBest Practices Handbook – Volume {v}\n{body}"
+        for v, body in ((1, "Orbits"), (1, "Covariance"), (2, "Screening"), (2, "Maneuvers"))
+    ]
+    text = drop_repeated_lines("\n".join(pages), pages=4)
+    assert text == "Orbits\nCovariance\nScreening\nManeuvers"
+
+
+def test_short_or_one_word_repeats_are_kept():
+    # Narrow-column scans put one word per line, so "spacecraft" repeats like a header;
+    # table cells and short labels repeat too.
+    text = "\n".join(["spacecraft", "12.5", "Two words", "Development"] * 5)
+    assert drop_repeated_lines(text, pages=4) == text
+
+
+def test_rare_lines_are_kept_in_a_long_report():
+    # Five times in 100 pages is a section title, not a running header.
+    text = "\n".join(["Thermal Control Design"] * 5 + ["body"])
+    assert drop_repeated_lines(text, pages=100) == text
