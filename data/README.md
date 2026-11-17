@@ -45,15 +45,26 @@ XHTML; the markup is stripped. Chosen on the 20 reports in
 [`extract_benchmark.py`](extract_benchmark.py), measured by
 [`compare_extractors.py`](compare_extractors.py) (2026-10-28):
 
-| | Characters | Broken words | Real-word share |
-|---|---|---|---|
-| NTRS text | 3,983,397 | 158 | 0.959 |
-| pypdf | 3,994,411 | 1,106 | 0.957 |
+| | Characters | Broken words | Real-word share | Known-pair share |
+|---|---|---|---|---|
+| NTRS text | 3,983,397 | 158 | 0.959 | 0.552 |
+| pypdf | 3,994,411 | 1,106 | 0.957 | 0.551 |
 
 "Broken" means split across a line ("dis-", "play"); "real" means in a 55,561-word list from
 our FineWeb-Edu text. NTRS's text scored higher on real words for 16 of the 20 reports. Its
 cost: it drops a real hyphen in about 54 places (by hand count), e.g. "highvoltage". Both
-carry the scans' OCR errors; cleaning comes next.
+carry the scans' OCR errors.
+
+**Correction (2026-11-09): reading order.** The first three measures count words but not
+their order, so a page read in the wrong order scores as well as a page read right. In the
+1986 report (NTRS 19880000702), NTRS's text has 85.6% one-word lines in scrambled order
+("have manipulation / by an operator. / manipulation / of / control / NASA's / the"), where
+pypdf reads "...systems which have manipulation or mobility capability and are controlled by
+an operator." The known-pair share (neighbouring word pairs among 377,217 pairs seen 3+
+times in the same FineWeb-Edu text) does see order. Overall it is a tie, but per report it
+is not: pypdf is ahead by more than 0.03 on that report (0.468 vs 0.387), NTRS on two 1960s
+reports (0.650 vs 0.576 and 0.687 vs 0.414, where pypdf mixes up a table's columns). The
+other 17 are within 0.03.
 
 ## Cleaning
 

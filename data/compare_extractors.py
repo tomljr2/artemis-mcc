@@ -9,6 +9,8 @@ For each report we count: characters, words broken across a line ("dis-\\nplay")
 share of words that are real English words. "Real" means seen at least MIN_COUNT times in
 the first REF_CHARS characters of our FineWeb-Edu training text. Rare technical words
 miss that list too, but they miss it equally for both extractors, so the comparison is fair.
+Last, the share of neighbouring word pairs seen MIN_COUNT times in the same text, which
+drops when an extractor reads words out of order (added in Step 16).
 
 Run (after `python -m data.extract_benchmark`):  python -m data.compare_extractors
 """
@@ -16,6 +18,7 @@ Run (after `python -m data.extract_benchmark`):  python -m data.compare_extracto
 import re
 import time
 from collections import Counter
+from itertools import pairwise
 from pathlib import Path
 
 from data.extract_benchmark import BENCHMARK
@@ -37,6 +40,27 @@ def load_vocab(
     with path.open(encoding="utf-8") as f:
         counts = Counter(w.lower() for w in WORD.findall(f.read(max_chars)))
     return {w for w, n in counts.items() if n >= min_count}
+
+
+def load_pairs(
+    path: Path = REF_TEXT, max_chars: int = REF_CHARS, min_count: int = MIN_COUNT
+) -> set[tuple[str, str]]:
+    """Lowercase word pairs ("current", "technology") seen at least min_count times."""
+    with path.open(encoding="utf-8") as f:
+        words = [w.lower() for w in WORD.findall(f.read(max_chars))]
+    counts = Counter(pairwise(words))
+    return {pair for pair, n in counts.items() if n >= min_count}
+
+
+def pair_share(text: str, pairs: set[tuple[str, str]]) -> float:
+    """Share of neighbouring word pairs found in pairs: low when words are out of order.
+
+    Word counts can't see reading order ("the electromechanical capability or mobility
+    provides" has only real words); pairs can.
+    """
+    words = [w.lower() for w in WORD.findall(text)]
+    neighbours = list(pairwise(words))
+    return sum(p in pairs for p in neighbours) / len(neighbours) if neighbours else 0.0
 
 
 def text_stats(text: str, vocab: set[str]) -> dict:
@@ -73,10 +97,10 @@ def line_break_fates(pypdf: str, ntrs: str, vocab: set[str]) -> tuple[Counter, l
 
 
 def main() -> None:
-    vocab = load_vocab()
-    print(f"reference: {len(vocab):,} words\n")
+    vocab, pairs = load_vocab(), load_pairs()
+    print(f"reference: {len(vocab):,} words, {len(pairs):,} word pairs\n")
     print(
-        f"{'NTRS id':12} {'year':>4}  {'chars ntrs / pypdf':>21}  {'broken':>13}  {'known':>11}  {'pypdf s':>7}"
+        f"{'NTRS id':12} {'year':>4}  {'chars ntrs / pypdf':>21}  {'broken':>13}  {'known':>11}  {'pairs':>11}  {'pypdf s':>7}"
     )
     totals = {"ntrs": Counter(), "pypdf": Counter()}
     fates, suspects = Counter(), []
@@ -92,6 +116,9 @@ def main() -> None:
         }
         seconds = time.perf_counter() - start
         stats = {name: text_stats(text, vocab) for name, text in texts.items()}
+        for name, text in texts.items():
+            stats[name]["pairs"] = pair_share(text, pairs)
+            stats[name]["n_pairs"] = max(len(WORD.findall(text)) - 1, 0)
         report_fates, report_suspects = line_break_fates(texts["pypdf"], texts["ntrs"], vocab)
         fates.update(report_fates)
         suspects += report_suspects
@@ -102,17 +129,20 @@ def main() -> None:
                     "words": s["words"],
                     "broken": s["broken"],
                     "known_words": round(s["known"] * s["words"]),
+                    "n_pairs": s["n_pairs"],
+                    "known_pairs": round(s["pairs"] * s["n_pairs"]),
                 }
             )
         n, p = stats["ntrs"], stats["pypdf"]
         print(
             f"{ntrs_id:<12} {year:>4}  {n['chars']:>10,} / {p['chars']:>9,}  {n['broken']:>5} / {p['broken']:>5}"
-            f"  {n['known']:.3f}/{p['known']:.3f}  {seconds:>7.1f}"
+            f"  {n['known']:.3f}/{p['known']:.3f}  {n['pairs']:.3f}/{p['pairs']:.3f}  {seconds:>7.1f}"
         )
     print()
     for name, t in totals.items():
         print(
             f"{name:6} chars {t['chars']:>11,}  broken {t['broken']:>6,}  known {t['known_words'] / t['words']:.3f}"
+            f"  pairs {t['known_pairs'] / t['n_pairs']:.3f}"
         )
     print(f"\nwords pypdf broke, as NTRS wrote them: {dict(fates.most_common())}")
     print(f"suspect joins ({len(suspects)}): {', '.join(suspects)}")

@@ -1309,3 +1309,20 @@ no running headers the rule could see.
 **Anomalies:** Bare page numbers are not removed; without page breaks they can't be told
 from table cells.
 **Next:** One-word-per-line text in the scans: measure it, then join lines into paragraphs.
+
+## 2026-11-09 · Phase 2 · Stage 1 · Step 16: Check reading order
+**Objective:** Measure the one-word-per-line text found in Step 15, before joining lines.
+**What I did:** Counted one-word lines per report (6.5% to 85.6%). Read the worst, the
+1986 report: its words are not just on separate lines, they are out of order. pypdf reads
+the same page in order. Added a reading-order measure to `data/compare_extractors.py`:
+`pair_share`, the share of neighbouring word pairs found among 377,217 pairs seen 3+ times
+in the first 50M characters of FineWeb-Edu (`load_pairs`). Correction in `data/README.md`.
+**What I learned:** The Step 10-12 benchmark was blind to word order: characters, broken
+words and real-word share all score a scrambled page as well as a good one. With pairs, the
+overall score is a tie (NTRS 0.552, pypdf 0.551), but per report it is not: pypdf is well
+ahead on the scrambled 1986 report (0.468 vs 0.387), NTRS on two 1960s reports (0.650 vs
+0.576, 0.687 vs 0.414). No one extractor is best for every report. Joining lines would not
+fix scrambled order, so I didn't build that.
+**Measurements:** counts above. 226 tests pass.
+**Anomalies:** Step 12's choice (NTRS's text everywhere) rested on order-blind measures.
+**Next:** Choose the extractor per report by pair share.
