@@ -1326,3 +1326,18 @@ fix scrambled order, so I didn't build that.
 **Measurements:** counts above. 226 tests pass.
 **Anomalies:** Step 12's choice (NTRS's text everywhere) rested on order-blind measures.
 **Next:** Choose the extractor per report by pair share.
+
+## 2026-11-17 · Phase 2 · Stage 1 · Step 17: Choose the extractor per file
+**Objective:** Act on Step 16: stop using NTRS's text where pypdf reads clearly more in order.
+**What I did:** Moved `load_pairs` and `pair_share` into a new `data/word_pairs.py`, so
+`ntrs.py` can use them (it can't import `compare_extractors.py`, which imports it).
+`choose_text` in `data/ntrs.py`: NTRS's text unless it is empty or pypdf's known-pair
+share is more than 0.03 higher (`PYPDF_MARGIN`). `report_text` now takes the pair set and
+runs both extractors on every file. PLAN note and `data/README.md` updated.
+**What I learned:** On the 20 reports it picks NTRS for 19 and pypdf for the scrambled 1986
+one, whose one-word lines fall from 85.6% to 21.2% (pair share 0.387 -> 0.468). pypdf's text
+of it also has less junk: cleaning rules 1-2 now remove 17,797 characters overall, not 22,066.
+The 0.03 margin rests on one clear pypdf win, so it needs a bigger sample.
+**Measurements:** counts above. 229 tests pass.
+**Anomalies:** None.
+**Next:** Reference lists: measure how much of each report they are, then decide.

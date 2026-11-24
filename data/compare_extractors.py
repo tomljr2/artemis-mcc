@@ -18,17 +18,12 @@ Run (after `python -m data.extract_benchmark`):  python -m data.compare_extracto
 import re
 import time
 from collections import Counter
-from itertools import pairwise
 from pathlib import Path
 
 from data.extract_benchmark import BENCHMARK
 from data.ntrs import RAW_DIR, ntrs_text, pypdf_text
+from data.word_pairs import MIN_COUNT, REF_CHARS, REF_TEXT, WORD, load_pairs, pair_share
 
-REF_TEXT = Path("data/processed/fineweb_edu/train.txt")
-REF_CHARS = 50_000_000
-MIN_COUNT = 3
-
-WORD = re.compile(r"[A-Za-z]+")
 # "dis-" at a line end, "play" on the next line, maybe with blank lines between
 BROKEN = re.compile(r"[A-Za-z]-[ \t]*\n\s*[a-z]")
 
@@ -40,27 +35,6 @@ def load_vocab(
     with path.open(encoding="utf-8") as f:
         counts = Counter(w.lower() for w in WORD.findall(f.read(max_chars)))
     return {w for w, n in counts.items() if n >= min_count}
-
-
-def load_pairs(
-    path: Path = REF_TEXT, max_chars: int = REF_CHARS, min_count: int = MIN_COUNT
-) -> set[tuple[str, str]]:
-    """Lowercase word pairs ("current", "technology") seen at least min_count times."""
-    with path.open(encoding="utf-8") as f:
-        words = [w.lower() for w in WORD.findall(f.read(max_chars))]
-    counts = Counter(pairwise(words))
-    return {pair for pair, n in counts.items() if n >= min_count}
-
-
-def pair_share(text: str, pairs: set[tuple[str, str]]) -> float:
-    """Share of neighbouring word pairs found in pairs: low when words are out of order.
-
-    Word counts can't see reading order ("the electromechanical capability or mobility
-    provides" has only real words); pairs can.
-    """
-    words = [w.lower() for w in WORD.findall(text)]
-    neighbours = list(pairwise(words))
-    return sum(p in pairs for p in neighbours) / len(neighbours) if neighbours else 0.0
 
 
 def text_stats(text: str, vocab: set[str]) -> dict:

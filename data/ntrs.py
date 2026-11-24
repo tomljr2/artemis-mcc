@@ -28,6 +28,7 @@ import certifi
 from pypdf import PdfReader
 
 from data.prepare_nasa_books import download
+from data.word_pairs import pair_share
 
 SITE = "https://ntrs.nasa.gov"
 API_URL = f"{SITE}/api/citations"
@@ -172,12 +173,24 @@ def page_count(ntrs_id: int, raw_dir: Path = RAW_DIR) -> int:
     return sum(len(PdfReader(pdf).pages) for pdf in (raw_dir / str(ntrs_id)).glob("*.pdf"))
 
 
-def report_text(ntrs_id: int, raw_dir: Path = RAW_DIR) -> str:
-    """A downloaded report's text: NTRS's own where it has some, else pypdf's.
+# How much better pypdf's reading order must be before it replaces NTRS's text. On the 20
+# benchmark reports, 17 were within 0.03 either way; pypdf led one by 0.081 (data/README.md).
+PYPDF_MARGIN = 0.03
 
-    NTRS's text won the extractor benchmark (Steps 10-11 in the Flight Log): the same amount
-    of text, slightly more real words, 158 words broken across lines against pypdf's 1,106.
+
+def choose_text(ntrs: str, pypdf: str, pairs: set[tuple[str, str]]) -> tuple[str, str]:
+    """("ntrs" or "pypdf", its text) for one file.
+
+    NTRS's text breaks far fewer words across lines (158 against pypdf's 1,106 on the
+    benchmark), so it wins unless it is empty or pypdf reads clearly more in order.
     """
+    if ntrs.strip() and pair_share(pypdf, pairs) <= pair_share(ntrs, pairs) + PYPDF_MARGIN:
+        return "ntrs", ntrs
+    return "pypdf", pypdf
+
+
+def report_text(ntrs_id: int, pairs: set[tuple[str, str]], raw_dir: Path = RAW_DIR) -> str:
+    """A downloaded report's text, each file from whichever extractor choose_text picks."""
     parts = []
     for pdf in sorted((raw_dir / str(ntrs_id)).glob("*.pdf")):
         # NTRS names its text "X.txt" for older files, "X.pdf.txt" for newer ones.
@@ -185,7 +198,7 @@ def report_text(ntrs_id: int, raw_dir: Path = RAW_DIR) -> str:
             t for t in (pdf.with_suffix(".txt"), pdf.with_name(pdf.name + ".txt")) if t.exists()
         ]
         text = ntrs_text(txts[0].read_text(encoding="utf-8", errors="replace")) if txts else ""
-        parts.append(text if text.strip() else pypdf_text(pdf))
+        parts.append(choose_text(text, pypdf_text(pdf), pairs)[1])
     return "\n\n".join(parts)
 
 

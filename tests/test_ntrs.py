@@ -2,6 +2,7 @@ import pytest
 
 from data.ntrs import (
     append_license_rows,
+    choose_text,
     download_report,
     file_links,
     license_row,
@@ -172,7 +173,7 @@ def test_report_text_prefers_ntrs_text_and_strips_its_markup(tmp_path, monkeypat
     (folder / "7.pdf").write_bytes(b"%PDF")
     (folder / "7.txt").write_text("<html><head>x</head><body><p>Orbit</p></body></html>")
     monkeypatch.setattr("data.ntrs.pypdf_text", lambda pdf: "from pypdf")
-    assert report_text(7, tmp_path).strip() == "Orbit"
+    assert report_text(7, set(), tmp_path).strip() == "Orbit"
 
 
 def test_report_text_falls_back_to_pypdf_when_ntrs_has_none(tmp_path, monkeypatch):
@@ -182,7 +183,7 @@ def test_report_text_falls_back_to_pypdf_when_ntrs_has_none(tmp_path, monkeypatc
     (folder / "b.pdf").write_bytes(b"%PDF")
     (folder / "b.txt").write_text("  \n")  # an empty one
     monkeypatch.setattr("data.ntrs.pypdf_text", lambda pdf: f"pypdf {pdf.stem}")
-    assert report_text(7, tmp_path) == "pypdf a\n\npypdf b"
+    assert report_text(7, set(), tmp_path) == "pypdf a\n\npypdf b"
 
 
 def test_report_text_finds_both_ntrs_text_names(tmp_path, monkeypatch):
@@ -193,4 +194,25 @@ def test_report_text_finds_both_ntrs_text_names(tmp_path, monkeypatch):
     (folder / "Report.pdf").write_bytes(b"%PDF")
     (folder / "Report.pdf.txt").write_text("new style")  # Report.pdf -> Report.pdf.txt
     monkeypatch.setattr("data.ntrs.pypdf_text", lambda pdf: "from pypdf")
-    assert report_text(7, tmp_path) == "old style\n\nnew style"
+    assert report_text(7, set(), tmp_path) == "old style\n\nnew style"
+
+
+# Pairs from the 1986 scan (NTRS 19880000702), where NTRS's text is out of order.
+PAIRS = {("are", "controlled"), ("controlled", "by"), ("by", "an"), ("an", "operator")}
+
+
+def test_pypdf_wins_when_it_reads_clearly_more_in_order():
+    ntrs, pypdf = "operator controlled by are an", "are controlled by an operator"
+    assert choose_text(ntrs, pypdf, PAIRS) == ("pypdf", pypdf)
+
+
+def test_ntrs_keeps_a_lead_within_the_margin(monkeypatch):
+    # NTRS's text breaks fewer words, so pypdf must lead by more than PYPDF_MARGIN.
+    ntrs, pypdf = "by an operator controlled are", "are controlled by an operator"  # 0.5, 1.0
+    monkeypatch.setattr("data.ntrs.PYPDF_MARGIN", 0.5)
+    assert choose_text(ntrs, pypdf, PAIRS) == ("ntrs", ntrs)
+    assert choose_text(pypdf, pypdf, PAIRS) == ("ntrs", pypdf)  # an exact tie
+
+
+def test_empty_ntrs_text_goes_to_pypdf():
+    assert choose_text(" \n", "anything", PAIRS) == ("pypdf", "anything")

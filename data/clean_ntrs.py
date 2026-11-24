@@ -22,6 +22,7 @@ from collections import Counter
 
 from data.extract_benchmark import BENCHMARK
 from data.ntrs import page_count, report_text
+from data.word_pairs import load_pairs
 
 WORD3 = re.compile(r"[^\W\d_]{3,}")  # 3+ letters in a row, in any alphabet
 
@@ -58,10 +59,11 @@ def drop_repeated_lines(text: str, pages: int) -> str:
 
 
 def main() -> None:
+    pairs = load_pairs()
     chars = {stage: Counter() for stage in ("raw", "rules 1-2", "rule 3")}
     for ntrs_id, year, _ in BENCHMARK:
         decade = year // 10 * 10
-        text = report_text(ntrs_id)
+        text = report_text(ntrs_id, pairs)
         chars["raw"][decade] += len(text)
         text = drop_junk_lines(text)
         chars["rules 1-2"][decade] += len(text)

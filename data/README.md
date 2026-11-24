@@ -39,9 +39,10 @@ one per publication year (`ntrs-public-metadata-{year}.ndjson`).
 
 ## Text extraction
 
-`report_text` in [`ntrs.py`](ntrs.py) uses the text NTRS makes of each file, and falls back
-to [pypdf](https://pypi.org/project/pypdf/) only when NTRS has none. Some NTRS texts are
-XHTML; the markup is stripped. Chosen on the 20 reports in
+`report_text` in [`ntrs.py`](ntrs.py) takes, for each file, the text NTRS makes of it, unless
+NTRS has none or [pypdf](https://pypi.org/project/pypdf/) reads clearly more in order: a
+known-pair share (below) more than 0.03 higher (`choose_text`, since 2026-11-17). Some NTRS
+texts are XHTML; the markup is stripped. Chosen on the 20 reports in
 [`extract_benchmark.py`](extract_benchmark.py), measured by
 [`compare_extractors.py`](compare_extractors.py) (2026-10-28):
 
@@ -65,6 +66,12 @@ times in the same FineWeb-Edu text) does see order. Overall it is a tie, but per
 is not: pypdf is ahead by more than 0.03 on that report (0.468 vs 0.387), NTRS on two 1960s
 reports (0.650 vs 0.576 and 0.687 vs 0.414, where pypdf mixes up a table's columns). The
 other 17 are within 0.03.
+
+So the choice is made per file, by [`word_pairs.py`](word_pairs.py). On the 20 reports it
+picks NTRS's text for 19 and pypdf's for the 1986 one, whose one-word lines fall from 85.6%
+to 21.2%. Ties go to NTRS, which breaks far fewer words. The 0.03 margin is set from these
+20 reports; with one clear pypdf win it is a judgment call, to check on a bigger sample.
+Cost: pypdf now runs on every file (106 s for these 20, 51.6 s of it one 1,166-page report).
 
 ## Cleaning
 
@@ -92,6 +99,10 @@ Both rules together:
 | 2010s | 117 | 296 | 0.06% |
 | 2020s | 738 | 2,056 | 0.38% |
 | All | 6,866 | 22,066 | 0.55% |
+
+(Measured on NTRS's text everywhere. With the per-file choice of 2026-11-17, pypdf's text of
+the 1986 report has less junk: the 1980s figure becomes 2,397 characters (0.59%) and the
+total 17,797 of 3,961,399 (0.45%). Rule 3's 27,702 is unchanged.)
 
 **Running headers and footers** (2026-11-04). NTRS's plain text has no page breaks (18 of
 the 20 reports), so a header is found by repetition: a line of 2+ words and 10+ characters

@@ -111,7 +111,7 @@ Phases 1 and 2 can overlap.
 
 ### Phase 2 · Corpus and FLIGHT-Bench v1
 - [ ] NTRS harvester and license log.
-- [x] Benchmark two PDF extractors on 20 reports; pick one. (NTRS's own text, pypdf as fallback.)
+- [x] Benchmark two PDF extractors on 20 reports; pick one. (Per file: NTRS's own text, unless pypdf reads clearly more in order.)
 - [ ] Cleaning, quality scoring, MinHash dedup; publish dataset with datasheet.
 - [ ] Write and hand-verify FLIGHT-Bench v1 from held-out documents; freeze it.
 
